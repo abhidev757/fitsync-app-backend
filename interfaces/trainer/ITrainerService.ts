@@ -1,4 +1,7 @@
+import { IBooking } from "../../models/bookingModel";
+import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
 import { ITrainer,IBlockedTrainerResponse,IUnblockedTrainerResponse, ITrainerProfile } from "../../types/trainer.types";
+import { UploadedFile } from "../../types/UploadedFile.types";
 
 
 export interface ITrainerService {
@@ -11,4 +14,10 @@ export interface ITrainerService {
     resetPassword(token: string, password: string): Promise<void>;
     getTrainerProfile(userId: string): Promise<ITrainerProfile | null>; 
     updateTrainerProfile(userId: string,userData: Partial<ITrainer>): Promise<{ user: ITrainer | null}>;
+    uploadCertificate(file: Express.Multer.File): Promise<UploadedFile>;
+    uploadProfile(file: Express.Multer.File): Promise<UploadedFile>;
+    addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null>
+    getTimeSlots(): Promise<DaySchedule[]>
+    getTrainerBookings(trainerId: string): Promise<IBooking[]>
+    getBookingDetails(bookingId: string): Promise<IBooking | null>
 }

@@ -126,5 +126,84 @@ export class AdminController {
             res.status(500).json({ message: "Internal server error" });
         }
     });
+
+    addSpecialization = asyncHandler(async (req: Request, res: Response) => {
+        const { name, description } = req.body;
+        const specialization = await this.adminService.addSpecialization(name, description);
+
+        if (specialization) {
+            res.status(HttpStatusCode.CREATED).json({
+                message: 'Specialization added successfully',
+                specialization,
+            });
+        } else {
+            res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({
+                message: 'Failed to add specialization',
+            });
+        }
+    });
+
+    getAllSpecializations = asyncHandler(async (req: Request, res: Response) => {
+        const specializations = await this.adminService.getAllSpecializations();
+        res.status(HttpStatusCode.OK).json(specializations);
+    });
+
+    toggleSpecializationStatus = asyncHandler(async (req: Request, res: Response) => {
+       
+        const { name,isBlock } = req.body;
+
+        const specialization = await this.adminService.toggleSpecializationStatus(name, isBlock);
+
+        if (specialization) {
+            res.status(HttpStatusCode.OK).json({
+                message: 'Specialization status updated successfully',
+                specialization,
+            });
+        } else {
+            res.status(HttpStatusCode.NOT_FOUND).json({
+                message: 'Specialization not found',
+            });
+        }
+    });
+
+    getAllApplicants = asyncHandler(async (req: Request, res: Response) => {
+        const applicants = await this.adminService.getAllApplicants();
+        console.log("applicants:",applicants);
+        
+        res.status(HttpStatusCode.OK).json(applicants);
+    });
+
+    approveTrainer = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            await this.adminService.approveTrainer(userId);
+    
+            res.status(200).json({message: "Trainer has been approved"});
+        } catch (error) {
+            console.error("Error approving trainer:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+
+    rejectTrainer = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            const { reason } = req.body;
+    
+            if (!reason) {
+               
+                res.status(400).json({ message: "Reason for rejection is required" });
+                return;
+            }
+    
+            await this.adminService.rejectTrainer(userId, reason);
+    
+          
+            res.status(200).json({ message: "Trainer has been rejected" });
+        } catch (error) {
+            console.error("Error rejecting trainer:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
     
 }

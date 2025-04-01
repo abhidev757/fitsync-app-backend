@@ -23,6 +23,11 @@ router.post("/saveFitnessData",userController.saveUserFitnessInfo);
 //Protected routes
 router.get("/getUserDetails/:token",userProtect, userController.getUserDetails);
 router.put("/userEditProfile/:id",userProtect, userController.userEditProfile);
+router.get("/fetchTrainers",userProtect, userController.getAllTrainers);
+router.get("/getTrainerDetails/:id",userProtect, userController.getTrainer);
+router.post("/create-payment-intent",userProtect, userController.createPaymentIntent);
+router.post("/create-bookings",userProtect, userController.createBooking);
+router.get("/get-bookings/:id",userProtect, userController.getUserBookings);
 
 // Google Login
 router.post('/auth/google', userController.googleAuth);

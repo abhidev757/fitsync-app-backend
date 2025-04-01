@@ -7,6 +7,7 @@ import { inject, injectable } from "inversify";
 import { GoogleAuthService } from "../../services/user/GoogleAuthService";
 import { TrainerGoogleAuthService } from "../../services/trainer/TrainerGoogleAuthService";
 import TrainerTokenService from "../../utils/TrainerTokenService";
+import { ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
 
 
 
@@ -88,13 +89,13 @@ export class TrainerController {
 
     registerTrainer = asyncHandler(async(req: Request, res: Response)=>{
         try {
-            const{name, email, password, specializations} = req.body;
+            const{name, email, password, specializations,certificateUrl,profileImageUrl} = req.body;
         const trainerExist = await this.trainerService.authenticateTrainer(email,password);
         if(trainerExist) {
             res.status(HttpStatusCode.BAD_REQUEST).json({message: StatusMessage.BAD_REQUEST});
             return
         }
-        const trainer = await this.trainerService.registerTrainer({name,email,password,specializations});
+        const trainer = await this.trainerService.registerTrainer({name,email,password,specializations,certificateUrl,profileImageUrl});
         res.status(HttpStatusCode.CREATED).json(trainer)
         } catch(err) {
             console.log(err);
@@ -246,4 +247,99 @@ export class TrainerController {
             res.status(500).json({ message: "Failed to update profile" });
           }
         });
+
+        uploadCertificate = asyncHandler(async (req: Request, res: Response) => {
+          if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return
+          }
+      
+          try {
+            const uploadedFile = await this.trainerService.uploadCertificate(req.file);
+            res.status(200).json({ fileUrl: uploadedFile.fileUrl });
+          } catch (error) {
+            res.status(500).json({ message: "File upload failed" });
+          }
+        });
+        uploadProfile = asyncHandler(async (req: Request, res: Response) => {
+          if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return
+          }
+      
+          try {
+            const uploadedFile = await this.trainerService.uploadProfile(req.file);
+            res.status(200).json({ fileUrl: uploadedFile.fileUrl });
+          } catch (error) {
+            res.status(500).json({ message: "File upload failed" });
+          }
+        });
+
+        addTimeSlot = asyncHandler(async (req: Request, res: Response) => {
+            try {
+              const { sessionType, startDate, endDate, time, price, numberOfSessions,userId } =
+                req.body;
+        
+              const data: ITimeSlotInput = {
+                trainerId:userId,
+                sessionType,
+                startDate,
+                endDate,
+                time,
+                price,
+                numberOfSessions,
+              };
+              await this.trainerService.addTimeSlot(data);
+        
+              res.status(200).json({ message: "Time Slot data saved successfully" });
+            } catch (error) {
+              console.error("Error saving time slot data:", error);
+              res.status(500).json({ message: "Internal Server Error" });
+            }
+          });
+          getTimeSlots = asyncHandler(async (req: Request, res: Response) => {
+            try {
+              let timeSlot = await this.trainerService.getTimeSlots();
+        
+              res.status(200).json(timeSlot);
+            } catch (error) {
+              console.error("Error fetching data:", error);
+              res.status(500).json({ message: "Internal Server Error" });
+            }
+          });
+
+          getTrainerBookings = async (req: Request, res: Response) => {
+            try {
+              const trainerId = req.params.id;
+              console.log("trainer ID: ", trainerId);
+              const Bookings = await this.trainerService.getTrainerBookings(trainerId);
+              console.log("Bookings:", Bookings);
+          
+              if (!Bookings) {
+                res.status(404).json({ message: "Bookings not found" });
+                return;
+              }
+          
+              res.status(200).json(Bookings);
+            } catch (error) {
+              res.status(500).json({ message: "Failed to fetch Bookings " });
+            }
+          };
+          getBookingDetails = async (req: Request, res: Response) => {
+            try {
+              const bookingId = req.params.id;
+              console.log("Booking ID: ", bookingId);
+              const Bookings = await this.trainerService.getBookingDetails(bookingId);
+              console.log("Booking:", Bookings);
+          
+              if (!Bookings) {
+                res.status(404).json({ message: "Bookings not found" });
+                return;
+              }
+          
+              res.status(200).json(Bookings);
+            } catch (error) {
+              res.status(500).json({ message: "Failed to fetch Bookings " });
+            }
+          };
 }

@@ -9,9 +9,10 @@ interface AuthenticatedRequest extends Request {
 }
 
 const userProtect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    console.log("Received Cookies:", req.cookies);
+
   const accessToken = req.cookies.accessToken;
   const refreshToken = req.cookies.refreshToken;
+
   if (accessToken) {
     const decodedAccess = TokenService.verifyAccessToken(accessToken);
     if (decodedAccess) {
@@ -27,7 +28,6 @@ const userProtect = asyncHandler(async (req: AuthenticatedRequest, res: Response
       
       if (user) {
         const newAccessToken = TokenService.generateAccessToken(user._id.toString(),user.role);
-        
         TokenService.setTokenCookies(res, newAccessToken, refreshToken);
         
         req.user = user;

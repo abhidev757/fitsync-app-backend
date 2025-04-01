@@ -18,6 +18,12 @@ router.get('/getAllTrainers',adminController.getAllTrainers)
 router.put('/updateTrainerStatus/:trainerId',adminController.updateTrainerStatus)
 router.get('/getUser/:id',adminController.getUser)
 router.get('/getTrainer/:id',adminController.getTrainer)
+router.post('/addSpecialization/',adminController.addSpecialization)
+router.get('/getAllSpecializations', adminController.getAllSpecializations);
+router.put('/toggleSpecializationStatus', adminController.toggleSpecializationStatus);
+router.get('/fetchApplicants', adminController.getAllApplicants);
+router.put('/approveTrainer/:id',adminController.approveTrainer)
+router.put('/rejectTrainer/:id',adminController.rejectTrainer)
 
 
 

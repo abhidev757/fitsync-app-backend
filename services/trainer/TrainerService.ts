@@ -6,6 +6,9 @@ import {generateOTP, sendOTP} from '../../utils/otpConfig'
 import { sendResetEmail } from "../../utils/resetGmail";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { UploadedFile } from "../../types/UploadedFile.types";
+import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
+import { IBooking } from "../../models/bookingModel";
 
 
 
@@ -170,5 +173,62 @@ export class TrainerService implements ITrainerService {
                     throw new Error("Failed to update profile");
                 }
             }
+
+            async uploadCertificate(file: Express.Multer.File): Promise<UploadedFile> {
+                try {
+                  const uploadedFile = await this.trainerRepository.uploadCertificate(file);
+                  return uploadedFile;
+                } catch (error) {
+                  throw new Error("Failed to upload certificate");
+                }
+              }
+            async uploadProfile(file: Express.Multer.File): Promise<UploadedFile> {
+                try {
+                  const uploadedFile = await this.trainerRepository.uploadProfile(file);
+                  return uploadedFile;
+                } catch (error) {
+                  throw new Error("Failed to upload certificate");
+                }
+              }
+
+              async addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null> {
+                try {
+                    const timeSlot = await this.trainerRepository.addTimeSlot(data);
+                    return timeSlot
+                } catch(err) {
+                    console.log(err);
+                    throw new Error('Failed to add Time slot');
+                }
+            }
+              async getTimeSlots(): Promise<DaySchedule[]> {
+                try {
+                    const timeSlot = await this.trainerRepository.getTimeSlots();
+                    return timeSlot
+                } catch(err) {
+                    console.log(err);
+                    throw new Error('Failed to add Time slot');
+                }
+            }
+            async getTrainerBookings(trainerId: string): Promise<IBooking[]> {
+              try {
+                const bookings = await this.trainerRepository.findByTrainerId(trainerId);
+                return bookings.map(booking => booking);
+              } catch (error) {
+                console.error("Error fetching trainer bookings:", error);
+                throw new Error("Failed to fetch trainer bookings");
+              }
+            }
+            async getBookingDetails(bookingId: string): Promise<IBooking | null> {
+                try {
+                  const booking = await this.trainerRepository.findByBookingId(bookingId);
+                  if (!booking) {
+                    throw new Error("Booking not found");
+                  }
+                  return booking;
+                } catch (error) {
+                  console.error("Error fetching booking details:", error);
+                  throw new Error("Failed to fetch booking details");
+                }
+              }
 
 }

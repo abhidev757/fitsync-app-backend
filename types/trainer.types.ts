@@ -1,4 +1,5 @@
 import mongoose, {Document,ObjectId, Types} from "mongoose";
+import { ITimeSlots } from "./timeSlots.types";
 
 export interface ITrainer extends Document {
     _id: mongoose.Types.ObjectId;
@@ -6,10 +7,14 @@ export interface ITrainer extends Document {
     email: string;
     password: string;
     phone: string;
-    sex: string
+    sex: string;
+    rejectReason: string;
+    certificateUrl: string;
+    profileImageUrl: string;
     specializations: string[];
     yearsOfExperience: number;
-    role: 'trainer'
+    verificationStatus: boolean;
+    role: 'trainer';
     resetPassword: {
         token: string | null;
         expDate: Date | null;
@@ -21,6 +26,7 @@ export interface ITrainer extends Document {
     status: boolean;
     otpExpiresAt: Date;
     blockedTrainers: string[];
+    timeSlots?: ITimeSlots[];
 
     matchPassword: (enteredPassword: string) => Promise<boolean>;
 }

@@ -6,18 +6,36 @@ import {
   IBlockedUserResponse,
   IUnblockedUserResponse,
   IUserProfile,
+  CreateBookingDto,
+  PaymentIntentMetadata,
 } from "../../types/user.types";
 import { generateOTP, sendOTP } from "../../utils/otpConfig";
 import { sendResetEmail } from "../../utils/resetGmail";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { IUserFitness } from "../../types/userInfo.types";
+import { ITrainer,ITrainerProfile } from "../../types/trainer.types";
+import Stripe from "stripe";
+import { IBooking } from "../../models/bookingModel";
+import mongoose from "mongoose";
+import { STRIPE_CONFIG } from "../../config/stripe";
+import { Types } from "aws-sdk/clients/acm";
 
 @injectable()
 export class UserService implements IUserService {
+  private stripe: Stripe;
   constructor(
-    @inject("IUserRepository") private userRepository: IUserRepository
-  ) {}
+    @inject("IUserRepository") private userRepository: IUserRepository,
+    @inject("StripeSecretKey") private readonly stripeSecretKey: string,
+    @inject("StripeConfig") private readonly config: Stripe.StripeConfig
+  ) {
+    if (!stripeSecretKey) {
+      throw new Error("STRIPE_SECRET_KEY is required"); 
+    }
+    this.stripe = new Stripe(stripeSecretKey, config);
+  }
+
+
   async authenticateUser(
     email: string,
     password: string
@@ -209,7 +227,7 @@ export class UserService implements IUserService {
       }
     }
 
-    
+
 async updateUserAndFitness(
   userId: string,
   userData: Partial<IUser>,
@@ -226,4 +244,103 @@ async updateUserAndFitness(
     throw new Error("Failed to update profile");
   }
 }
+
+async getAllTrainers(): Promise<ITrainer[]> {
+    try {
+      return await this.userRepository.findAllTrainers();
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to retrieve trainers");
+    }
+  }
+
+  async getTrainer(userId: string):Promise<ITrainerProfile | null> {
+    try {
+      const trainerProfile = await this.userRepository.findTrainerById(userId);
+      return trainerProfile;
+    } catch (error) {
+      throw new Error("Failed to fetch trainer profile");
+    }
+  }
+
+  async createPaymentIntent(amount: number,trainerId: string,metadata: PaymentIntentMetadata): Promise<Stripe.PaymentIntent> {
+   
+    const userId = new mongoose.Types.ObjectId(metadata.userId);
+    const trainerObjectId = new mongoose.Types.ObjectId(trainerId);
+  
+   
+    const dbPayment = await this.userRepository.createPayment({
+      userId,
+      trainerId: trainerObjectId,
+      amount: amount / 100,
+      currency: "usd",
+      status: "requires_payment_method",
+      metadata,
+      stripePaymentId: undefined 
+    });
+  
+   
+    const stripePI = await this.stripe.paymentIntents.create({
+      amount,
+      currency: "usd",
+      metadata: {
+        ...metadata,
+        internalPaymentId: dbPayment._id.toString()
+      },
+    });
+  
+    return stripePI;
+  }
+
+
+async createBooking(bookingData: any): Promise<IBooking> {
+  try {
+    
+    const validatedData = {
+      userId: bookingData.user || bookingData.userId,
+      trainerId: bookingData.trainer || bookingData.trainerId,
+      sessionTime: bookingData.sessionTime,
+      startDate: bookingData.startDate,
+      isPackage: bookingData.isPackage,
+      paymentId: bookingData.paymentId,
+      amount: bookingData.amount,
+      status: "confirmed" as const
+    };
+
+   
+    if (!validatedData.userId || !validatedData.trainerId) {
+      throw new Error("Missing required fields: userId or trainerId");
+    }
+
+    
+    const processedData: CreateBookingDto = {
+      ...validatedData,
+      userId: new mongoose.Types.ObjectId(validatedData.userId),
+      trainerId: new mongoose.Types.ObjectId(validatedData.trainerId),
+      status: validatedData.status
+    };
+
+    console.log("Processed booking data:", processedData);
+    
+    const booking = await this.userRepository.createBooking(processedData);
+    return booking.toObject();
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    throw new Error("Failed to create booking");
+  }
 }
+
+async getUserBookings(userId: string): Promise<IBooking[]> {
+  try {
+    const bookings = await this.userRepository.findByUserId(userId);
+    return bookings.map(booking => booking);
+  } catch (error) {
+    console.error("Error fetching user bookings:", error);
+    throw new Error("Failed to fetch user bookings");
+  }
+}
+
+
+}
+
+

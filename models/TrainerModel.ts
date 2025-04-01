@@ -8,6 +8,14 @@ const TrainerSchema = new mongoose.Schema<ITrainer>(
             type: String,
             required: true,
         },
+        certificateUrl:{
+            type: String,
+            required: true
+        },
+        profileImageUrl:{
+            type: String,
+            required: true
+        },
         email: {
             type: String,
             required: true,
@@ -32,6 +40,12 @@ const TrainerSchema = new mongoose.Schema<ITrainer>(
                 type: String
             }
         ],
+        verificationStatus: 
+            {
+                type: Boolean,
+                default: false
+            }
+        ,
         isGoogleLogin:{
             type: Boolean,
             default: false,
@@ -49,6 +63,9 @@ const TrainerSchema = new mongoose.Schema<ITrainer>(
         status: {
             type: Boolean,
             default: true,
+        },
+        rejectReason: {
+            type: String,
         },
         resetPassword: {
             token: { type: String, default: null },

@@ -23,6 +23,7 @@ import { IUserRepository } from "../interfaces/user/IUserRepository";
 import { UserRepository } from "../repositories/user/UserRepository";
 import { UserService } from "../services/user/UserService";
 import { UserController } from "../controller/user/UserController";
+import { STRIPE_CONFIG } from "./stripe";
 
 
 
@@ -45,7 +46,13 @@ container.bind<TrainerController>('TrainerController').to(TrainerController).inS
 container.bind<IUserRepository>('IUserRepository').toDynamicValue(()=>{
     return new UserRepository()
 })
-container.bind<IUserService>('IUserService').to(UserService).inSingletonScope();
+
 container.bind<UserController>('UserController').to(UserController).inSingletonScope();
+container.bind<IUserService>('IUserService').to(UserService).inSingletonScope();
+container.bind<string>("StripeSecretKey")
+  .toConstantValue(process.env.STRIPE_SECRET_KEY!);
+
+container.bind<typeof STRIPE_CONFIG>("StripeConfig")
+  .toConstantValue(STRIPE_CONFIG);
 
 export {container}
