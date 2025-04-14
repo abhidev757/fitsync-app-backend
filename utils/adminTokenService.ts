@@ -4,8 +4,9 @@ import { Response } from 'express';
 interface TokenPayload {
     adminId: string;
     role: string;
-    tokenType: 'access' | 'refresh';
+    adminTokenType: 'access' | 'refresh';
 }
+
 
 class AdminTokenService {
     static generateAdminAccessToken(adminId: string, role:string): string {
@@ -38,20 +39,22 @@ class AdminTokenService {
         })
     }
 
-    static verifyAccessToken(token: string): TokenPayload | null {
+    static verifyAdminAccessToken(token: string): TokenPayload | null {
         try {
-          const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string) as TokenPayload;
-          return decoded.tokenType === 'access' ? decoded : null;
+          const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_ADMIN as string) as TokenPayload;
+          console.log("Decode Result:",decoded);
+          
+          return decoded.adminTokenType === 'access' ? decoded : null;
         } catch (error) {
             console.log(error);
           return null;
         }
       }
     
-      static verifyRefreshToken(token: string): TokenPayload | null {
+      static verifyAdminRefreshToken(token: string): TokenPayload | null {
         try {
-          const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string) as TokenPayload;
-          return decoded.tokenType === 'refresh' ? decoded : null;
+          const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET_ADMIN as string) as TokenPayload;
+          return decoded.adminTokenType === 'refresh' ? decoded : null;
         } catch (error) {
             console.log(error);
           return null;

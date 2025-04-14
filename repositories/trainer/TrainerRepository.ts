@@ -9,6 +9,7 @@ import { UploadedFile } from "../../types/UploadedFile.types";
 import { ObjectCannedACL, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
 import { Booking, IBooking } from "../../models/bookingModel";
+import WalletModel, { IWalletTransaction } from "../../models/WalletModel";
 
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
@@ -24,6 +25,7 @@ export class TrainerRepository extends BaseRepository<ITrainer> implements ITrai
     private readonly TrainerModel = Trainer;
     private readonly TimeSlotModel = TimeSlots
     private readonly BookingModel = Booking
+    private readonly WalletModel = WalletModel
 
     constructor() {
         super(Trainer)
@@ -180,5 +182,48 @@ export class TrainerRepository extends BaseRepository<ITrainer> implements ITrai
             .exec();
           return result;
         }
+
+        async updateBookingStatus(bookingId: string, status: string): Promise<IBooking> {
+            const updatedBooking = await this.BookingModel.findByIdAndUpdate(
+              bookingId,
+              { status },
+              { new: true }
+            );
+          
+            if (!updatedBooking) {
+              throw new Error("Booking not found");
+            }
+          
+            return updatedBooking;
+          }
+          
+          
+
+          async debit(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void> {
+            const trainer = await Trainer.findById(trainerId);
+            if (!trainer || trainer.balance < amount) {
+              throw new Error('Insufficient balance');
+            }
+        
+            await Trainer.findByIdAndUpdate(trainerId, { $inc: { balance: -amount } });
+        
+             await this.WalletModel.create({
+              trainerId,
+              amount,
+              type: 'debit',
+              sessionId,
+              reason,
+            });
+          }
+        
+        async getTrainerBalance(trainerId: string): Promise<number> {
+            const trainer = await Trainer.findById(trainerId);
+            return trainer?.balance ?? 0;
+          };
+          
+        async getWalletTransactions(trainerId: string): Promise<IWalletTransaction[]> {
+            return await this.WalletModel.find({ trainerId }).sort({ createdAt: -1 });
+          };
+    
                   
 }

@@ -3,6 +3,8 @@ import { ITrainer, ITrainerProfile } from "../../types/trainer.types";
 import { IUser,IBlockedUserResponse,IUnblockedUserResponse, IUserProfile, IUserFitnessResponse, PaymentIntentMetadata, CreateBookingDto } from "../../types/user.types";
 import { IUserFitness } from "../../types/userInfo.types";
 import { IBooking } from "../../models/bookingModel";
+import { ISpecialization } from "../../types/specialization.types";
+import { UploadedFile } from "../../types/UploadedFile.types";
 
 
 export interface IUserService {
@@ -21,4 +23,7 @@ export interface IUserService {
     createPaymentIntent(amount: number, trainerId: string, metadata: PaymentIntentMetadata): Promise<Stripe.PaymentIntent>;
     createBooking(bookingData: Partial<IBooking>): Promise<IBooking>;
     getUserBookings(userId: string): Promise<IBooking[]>;
+    getAllSpecializations(): Promise<ISpecialization[]>
+    changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean>
+    uploadProfile(file: Express.Multer.File,userId: string): Promise<UploadedFile>
 }

@@ -1,5 +1,6 @@
 import mongoose, {Document,ObjectId, Types} from "mongoose";
 import { ITimeSlots } from "./timeSlots.types";
+import { IWalletTransaction } from "../models/WalletModel";
 
 export interface ITrainer extends Document {
     _id: mongoose.Types.ObjectId;
@@ -24,8 +25,9 @@ export interface ITrainer extends Document {
     isGoogleLogin: boolean;
     googleId?: string;
     status: boolean;
+    balance: number;
+    isBlocked:boolean;
     otpExpiresAt: Date;
-    blockedTrainers: string[];
     timeSlots?: ITimeSlots[];
 
     matchPassword: (enteredPassword: string) => Promise<boolean>;
@@ -57,3 +59,8 @@ export interface IUnblockedTrainerResponse {
     _id: string;
     blockedTrainers: string[];
 }
+
+export interface WalletDetails {
+    balance: number;
+    transactions: IWalletTransaction[];
+  }

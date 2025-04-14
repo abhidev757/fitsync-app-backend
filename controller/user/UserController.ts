@@ -313,14 +313,12 @@ export class UserController {
         return;
       }
 
-      
       const updatedProfile = await this.userService.updateUserAndFitness(
         userId,
         userData,
         fitnessData
       );
 
-     
       res.status(200).json({
         message: "Profile updated successfully",
         user: updatedProfile.user,
@@ -347,9 +345,7 @@ export class UserController {
   getTrainer = asyncHandler(async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      console.log("Trainer ID: ", userId);
       const trainerProfile = await this.userService.getTrainer(userId);
-      console.log("TrainerProfile", trainerProfile);
 
       if (!trainerProfile) {
         res.status(404).json({ message: "Trainer not found" });
@@ -364,12 +360,12 @@ export class UserController {
 
   createPaymentIntent = asyncHandler(async (req: Request, res: Response) => {
     try {
-      const { userId,amount, trainerId, sessionTime, startDate, isPackage } = req.body;
+      const { userId, amount, trainerId, sessionTime, startDate, isPackage } =
+        req.body;
       console.log(`UserId:${userId},TrainerId:${trainerId}`);
-      
-  
+
       const metadata: PaymentIntentMetadata = {
-        userId, // Use authenticated user's ID
+        userId,
         trainerId,
         sessionTime,
         startDate,
@@ -382,45 +378,98 @@ export class UserController {
         metadata
       );
 
-   
       res.status(200).json({ clientSecret: paymentIntent.client_secret });
-      
     } catch (error) {
       console.error("Payment intent error:", error);
       res.status(500).json({ message: "Failed to create payment intent" });
     }
-});
+  });
 
+  createBooking = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      console.log("Incoming booking data:", req.body);
+      const bookingData = req.body;
+      const booking = await this.userService.createBooking(bookingData);
+      res.status(201).json(booking);
+    } catch (error) {
+      console.log("Error creating Booking", error);
+      res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
 
+  getUserBookings = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+      console.log("user ID: ", userId);
+      const Bookings = await this.userService.getUserBookings(userId);
+      console.log("Bookings:", Bookings);
 
-createBooking = async (req: Request, res: Response) => {
-  try {
-    console.log("Incoming booking data:", req.body); 
-    const bookingData = req.body;
-    const booking = await this.userService.createBooking(bookingData);
-    res.status(201).json(booking);
-  } catch (error) {
-    console.log("Error creating Booking", error);
-    res.status(500).json({ message: 'Failed to create booking' });
-  }
-}
+      if (!Bookings) {
+        res.status(404).json({ message: "Bookings not found" });
+        return;
+      }
 
-getUserBookings = async (req: Request, res: Response) => {
-  try {
+      res.status(200).json(Bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Bookings " });
+    }
+  });
+
+  getAllSpecializations = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const specializations = await this.userService.getAllSpecializations();
+      res.status(HttpStatusCode.OK).json(specializations);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+        .json({ message: StatusMessage.INTERNAL_SERVER_ERROR });
+    }
+  });
+
+  changePassword = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.params.id;
-    console.log("user ID: ", userId);
-    const Bookings = await this.userService.getUserBookings(userId);
-    console.log("Bookings:", Bookings);
+    const { currentPassword, newPassword } = req.body;
+    try {
+      const result = await this.userService.changePassword(
+        userId,
+        currentPassword,
+        newPassword
+      );
+      res.status(HttpStatusCode.OK).json({
+        success: result,
+        message: result
+          ? "Password changed successfully"
+          : "Unable to change password",
+      });
+    } catch (error: any) {
+      // If error thrown is due to wrong current password or other validation,
+      // send proper status code and message.
+      res
+        .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+        .json({ message: error.message || "Error changing password" });
+    }
+  });
 
-    if (!Bookings) {
-      res.status(404).json({ message: "Bookings not found" });
+  uploadProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!req.file) {
+      res.status(400).json({ message: "No file uploaded" });
       return;
     }
+    const userId = req.params.userId;
+    if (!userId) {
+      res.status(400).json({ message: "User ID is required" });
+      return;
+    }
+  
+    try {
+      const uploadedFile = await this.userService.uploadProfile(req.file, userId);
+      res.status(200).json({ success: true, avatarUrl: uploadedFile.fileUrl });
+    } catch (error) {
+      res.status(500).json({ message: "File upload failed" });
+    }
+  });
+  
 
-    res.status(200).json(Bookings);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch Bookings " });
-  }
-};
   
 }

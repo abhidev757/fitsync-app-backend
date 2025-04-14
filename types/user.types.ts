@@ -5,6 +5,7 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    profileImageUrl: string;
     role: 'user'
     resetPassword: {
         token: string | null;
@@ -17,7 +18,7 @@ export interface IUser extends Document {
     status: boolean;
     otpExpiresAt: Date;
     phone: string;
-    blockedUsers: string[];
+    isBlocked: boolean;
 
     matchPassword: (enteredPassword: string) => Promise<boolean>;
 }
@@ -44,6 +45,7 @@ export interface IUserProfile {
   activity?: string;
   weight?: string;
   targetWeight?: string;
+  profileImageUrl?: string;
 }
 
 export interface IUserFitnessResponse {

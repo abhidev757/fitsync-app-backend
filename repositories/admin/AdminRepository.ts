@@ -58,8 +58,8 @@ export class AdminRepository
   ): Promise<IUser | null> {
     try {
       const updatedUser = await this.userModel
-        .findByIdAndUpdate(userId, { status: newStatus }, { new: true })
-        .select("_id name status");
+        .findByIdAndUpdate(userId, { isBlocked: newStatus }, { new: true })
+        .select("_id name isBlocked");
       if (!updatedUser) {
         throw new Error("User not found");
       }
@@ -86,8 +86,8 @@ export class AdminRepository
   ): Promise<ITrainer | null> {
     try {
       const updatedTrainer = await this.trainerModel
-        .findByIdAndUpdate(trainerId, { status: newStatus }, { new: true })
-        .select("_id name status");
+        .findByIdAndUpdate(trainerId, { isBlocked: newStatus }, { new: true })
+        .select("_id name isBlocked");
       if (!updatedTrainer) {
         throw new Error("User not found");
       }

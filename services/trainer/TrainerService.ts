@@ -1,234 +1,327 @@
-import { inject,injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import { ITrainerService } from "../../interfaces/trainer/ITrainerService";
 import { ITrainerRepository } from "../../interfaces/trainer/ITrainerRepository";
-import { ITrainer, IBlockedTrainerResponse, IUnblockedTrainerResponse, ITrainerProfile } from "../../types/trainer.types";
-import {generateOTP, sendOTP} from '../../utils/otpConfig'
+import {
+  ITrainer,
+  IBlockedTrainerResponse,
+  IUnblockedTrainerResponse,
+  ITrainerProfile,
+  WalletDetails,
+} from "../../types/trainer.types";
+import { generateOTP, sendOTP } from "../../utils/otpConfig";
 import { sendResetEmail } from "../../utils/resetGmail";
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { UploadedFile } from "../../types/UploadedFile.types";
-import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
+import {
+  DaySchedule,
+  ITimeSlotInput,
+  ITimeSlots,
+} from "../../types/timeSlots.types";
 import { IBooking } from "../../models/bookingModel";
-
-
-
-
-
+import mongoose from "mongoose";
 
 @injectable()
 export class TrainerService implements ITrainerService {
-    constructor(@inject('ITrainerRepository') private trainerRepository: ITrainerRepository) {}
-    async authenticateTrainer(email: string, password: string): Promise<ITrainer | null> {
-        try {
-            const trainer = await this.trainerRepository.findByEmail(email);
-            if(trainer && (await trainer.matchPassword(password))) {
-                return trainer
-            }
-            return null
-        } catch(err) {
-            console.log(err);
-            throw new Error('Failed to authenticate Trainer')
-        }
+  constructor(
+    @inject("ITrainerRepository") private trainerRepository: ITrainerRepository
+  ) {}
+  async authenticateTrainer(
+    email: string,
+    password: string
+  ): Promise<ITrainer | null> {
+    try {
+      const trainer = await this.trainerRepository.findByEmail(email);
+      if (trainer && (await trainer.matchPassword(password))) {
+        return trainer;
+      }
+      return null;
+    } catch (err) {
+      console.log(err);
+      throw new Error("Failed to authenticate Trainer");
     }
+  }
 
-    async registerTrainer(trainerData: ITrainer): Promise<ITrainer | null> {
-        let dataToUpdate: Partial<ITrainer> | null = null
-        try {
-            const otp = generateOTP()
-            const otpExpiresAt = new Date(Date.now()+1*60*1000);
-            const trainer = await this.trainerRepository.createNewData({
-                ...trainerData,
-                otp,
-                otpExpiresAt
-            });
-            if(!trainer) {
-                throw new Error('Trainer registeration failed');
-            }
-            await sendOTP(trainerData.email,otp);
-            if(dataToUpdate) {
-                await this.trainerRepository.updateOneById(trainer._id.toString(), dataToUpdate)
-            }
-            return trainer
-        } catch(err) {
-            console.log(err);
-            throw new Error('Failed to register Trainer');
-        }
+  async registerTrainer(trainerData: ITrainer): Promise<ITrainer | null> {
+    let dataToUpdate: Partial<ITrainer> | null = null;
+    try {
+      const otp = generateOTP();
+      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
+      const trainer = await this.trainerRepository.createNewData({
+        ...trainerData,
+        otp,
+        otpExpiresAt,
+      });
+      if (!trainer) {
+        throw new Error("Trainer registeration failed");
+      }
+      await sendOTP(trainerData.email, otp);
+      if (dataToUpdate) {
+        await this.trainerRepository.updateOneById(
+          trainer._id.toString(),
+          dataToUpdate
+        );
+      }
+      return trainer;
+    } catch (err) {
+      console.log(err);
+      throw new Error("Failed to register Trainer");
     }
+  }
 
-    async getTrainerById(trainerId: string): Promise<ITrainer> {
-        try {
-            const trainer = await this.trainerRepository.findById(trainerId);
-            if (!trainer) {
-                throw new Error('trainer not found');
-            }
-            return trainer;
-        } catch (error) {
-            console.log(error);
-            throw new Error('Failed to Fetch trainer');
-        }
+  async getTrainerById(trainerId: string): Promise<ITrainer> {
+    try {
+      const trainer = await this.trainerRepository.findById(trainerId);
+      if (!trainer) {
+        throw new Error("trainer not found");
+      }
+      return trainer;
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to Fetch trainer");
     }
+  }
 
-    async resendOTP(email: string): Promise<{ success: boolean; message: string }> {
-            try {
-                const user = await this.trainerRepository.findByEmail(email);
-                if (!user) {
-                    return { success: false, message: 'User not found' };
-                }
-        
-                const otp = generateOTP();
-                const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
-        
-                await this.trainerRepository.update(user._id.toString(), { otp, otpExpiresAt });
-                await sendOTP(email, otp);
-        
-                return { success: true, message: 'OTP sent successfully' };
-            } catch (error) {
-                console.log(error);
-                return { success: false, message: 'Failed to resend OTP' };
-            }
-        }
-    
-        async verifyOTP(email: string, otp: string): Promise<boolean> {
-            try {
-                const user = await this.trainerRepository.findByEmail(email);
-                if (!user) {
-                    throw new Error('User not found');
-                }
-            
-                if (user.otp !== otp) {
-                    throw new Error('Invalid OTP');
-                }
-            
-                if (new Date() > user.otpExpiresAt) {
-                    throw new Error('OTP has expired');
-                }
-            
-                return true;
-            } catch (error) {
-                console.log(error);
-                throw new Error('Failed to verify OTP');
-            }
-        }
-    
-        async requestPasswordReset(email: string): Promise<void> {
-            try {
-                const user = await this.trainerRepository.findByEmail(email);
-                if (!user) throw new Error('User Not Found');
-            
-                const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
-                const expDate = new Date(Date.now() + 3600000); 
-                await this.trainerRepository.update(user._id.toString(), { resetPassword: { token: resetToken, expDate, lastResetDate: new Date() } });
-            
-                const resetLink = `${process.env.CLIENT_URL}/trainerReset-password/${resetToken}`;
-                await sendResetEmail(user.email, resetLink);
-            } catch (error) {
-                console.log(error);
-                throw new Error('Failed to request password reset');
-            }
-        }
-        
-        
-        async resetPassword(token: string, newPassword: string): Promise<void> {
-            try {
-                
-                const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
-                const user = await this.trainerRepository.findById(decoded.userId);
-                if (!user || user.resetPassword.token !== token) throw new Error('Invalid or expired token');
-                if (user.resetPassword.expDate && user.resetPassword.expDate < new Date()) {
-                    throw new Error('Reset token expired');
-                }
-                const hashedPassword = await bcrypt.hash(newPassword, 10);
-                await this.trainerRepository.update(user._id.toString(), {
-                    password: hashedPassword,
-                    resetPassword: { ...user.resetPassword, lastResetDate: new Date(), token: null, expDate: null },
-                });
-            } catch (error) {
-                console.log(error);
-                throw new Error('Failed to reset password');
-            }
-        }
+  async resendOTP(
+    email: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.trainerRepository.findByEmail(email);
+      if (!user) {
+        return { success: false, message: "User not found" };
+      }
 
-        async getTrainerProfile(userId: string):Promise<ITrainerProfile | null> {
-              console.log('serviceeee')
-              try {
-                const trainerProfile = await this.trainerRepository.findById(userId);
-                return trainerProfile;
-              } catch (error) {
-                throw new Error("Failed to fetch trainer profile");
-              }
-            }
-        
-            
-            async updateTrainerProfile(userId: string, userData: Partial<ITrainer>): Promise<{ user: ITrainer | null }> {
-                try {
-                    console.log("Updating trainer profile with userId:", userId);
-                    console.log("User data to update:", userData);
-                    
-                    const updatedTrainer = await this.trainerRepository.update(userId, userData);
-                    console.log("Updated trainer profile:", updatedTrainer);
-                    
-                    return { user: updatedTrainer };
-                } catch (error) {
-                    console.error("Error updating trainer data:", error);
-                    throw new Error("Failed to update profile");
-                }
-            }
+      const otp = generateOTP();
+      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
 
-            async uploadCertificate(file: Express.Multer.File): Promise<UploadedFile> {
-                try {
-                  const uploadedFile = await this.trainerRepository.uploadCertificate(file);
-                  return uploadedFile;
-                } catch (error) {
-                  throw new Error("Failed to upload certificate");
-                }
-              }
-            async uploadProfile(file: Express.Multer.File): Promise<UploadedFile> {
-                try {
-                  const uploadedFile = await this.trainerRepository.uploadProfile(file);
-                  return uploadedFile;
-                } catch (error) {
-                  throw new Error("Failed to upload certificate");
-                }
-              }
+      await this.trainerRepository.update(user._id.toString(), {
+        otp,
+        otpExpiresAt,
+      });
+      await sendOTP(email, otp);
 
-              async addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null> {
-                try {
-                    const timeSlot = await this.trainerRepository.addTimeSlot(data);
-                    return timeSlot
-                } catch(err) {
-                    console.log(err);
-                    throw new Error('Failed to add Time slot');
-                }
-            }
-              async getTimeSlots(): Promise<DaySchedule[]> {
-                try {
-                    const timeSlot = await this.trainerRepository.getTimeSlots();
-                    return timeSlot
-                } catch(err) {
-                    console.log(err);
-                    throw new Error('Failed to add Time slot');
-                }
-            }
-            async getTrainerBookings(trainerId: string): Promise<IBooking[]> {
-              try {
-                const bookings = await this.trainerRepository.findByTrainerId(trainerId);
-                return bookings.map(booking => booking);
-              } catch (error) {
-                console.error("Error fetching trainer bookings:", error);
-                throw new Error("Failed to fetch trainer bookings");
-              }
-            }
-            async getBookingDetails(bookingId: string): Promise<IBooking | null> {
-                try {
-                  const booking = await this.trainerRepository.findByBookingId(bookingId);
-                  if (!booking) {
-                    throw new Error("Booking not found");
-                  }
-                  return booking;
-                } catch (error) {
-                  console.error("Error fetching booking details:", error);
-                  throw new Error("Failed to fetch booking details");
-                }
-              }
+      return { success: true, message: "OTP sent successfully" };
+    } catch (error) {
+      console.log(error);
+      return { success: false, message: "Failed to resend OTP" };
+    }
+  }
 
+  async verifyOTP(email: string, otp: string): Promise<boolean> {
+    try {
+      const user = await this.trainerRepository.findByEmail(email);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.otp !== otp) {
+        throw new Error("Invalid OTP");
+      }
+
+      if (new Date() > user.otpExpiresAt) {
+        throw new Error("OTP has expired");
+      }
+
+      return true;
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to verify OTP");
+    }
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      const user = await this.trainerRepository.findByEmail(email);
+      if (!user) throw new Error("User Not Found");
+
+      const resetToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET as string,
+        { expiresIn: "1h" }
+      );
+      const expDate = new Date(Date.now() + 3600000);
+      await this.trainerRepository.update(user._id.toString(), {
+        resetPassword: {
+          token: resetToken,
+          expDate,
+          lastResetDate: new Date(),
+        },
+      });
+
+      const resetLink = `${process.env.CLIENT_URL}/trainerReset-password/${resetToken}`;
+      await sendResetEmail(user.email, resetLink);
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to request password reset");
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    try {
+      const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
+      const user = await this.trainerRepository.findById(decoded.userId);
+      if (!user || user.resetPassword.token !== token)
+        throw new Error("Invalid or expired token");
+      if (
+        user.resetPassword.expDate &&
+        user.resetPassword.expDate < new Date()
+      ) {
+        throw new Error("Reset token expired");
+      }
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await this.trainerRepository.update(user._id.toString(), {
+        password: hashedPassword,
+        resetPassword: {
+          ...user.resetPassword,
+          lastResetDate: new Date(),
+          token: null,
+          expDate: null,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to reset password");
+    }
+  }
+
+  async getTrainerProfile(userId: string): Promise<ITrainerProfile | null> {
+    console.log("serviceeee");
+    try {
+      const trainerProfile = await this.trainerRepository.findById(userId);
+      return trainerProfile;
+    } catch (error) {
+      throw new Error("Failed to fetch trainer profile");
+    }
+  }
+
+  async updateTrainerProfile(
+    userId: string,
+    userData: Partial<ITrainer>
+  ): Promise<{ user: ITrainer | null }> {
+    try {
+      console.log("Updating trainer profile with userId:", userId);
+      console.log("User data to update:", userData);
+
+      const updatedTrainer = await this.trainerRepository.update(
+        userId,
+        userData
+      );
+      console.log("Updated trainer profile:", updatedTrainer);
+
+      return { user: updatedTrainer };
+    } catch (error) {
+      console.error("Error updating trainer data:", error);
+      throw new Error("Failed to update profile");
+    }
+  }
+
+  async uploadCertificate(file: Express.Multer.File): Promise<UploadedFile> {
+    try {
+      const uploadedFile = await this.trainerRepository.uploadCertificate(file);
+      return uploadedFile;
+    } catch (error) {
+      throw new Error("Failed to upload certificate");
+    }
+  }
+  async uploadProfile(file: Express.Multer.File): Promise<UploadedFile> {
+    try {
+      const uploadedFile = await this.trainerRepository.uploadProfile(file);
+      return uploadedFile;
+    } catch (error) {
+      throw new Error("Failed to upload certificate");
+    }
+  }
+
+  async addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null> {
+    try {
+      const timeSlot = await this.trainerRepository.addTimeSlot(data);
+      return timeSlot;
+    } catch (err) {
+      console.log(err);
+      throw new Error("Failed to add Time slot");
+    }
+  }
+  async getTimeSlots(): Promise<DaySchedule[]> {
+    try {
+      const timeSlot = await this.trainerRepository.getTimeSlots();
+      return timeSlot;
+    } catch (err) {
+      console.log(err);
+      throw new Error("Failed to add Time slot");
+    }
+  }
+  async getTrainerBookings(trainerId: string): Promise<IBooking[]> {
+    try {
+      const bookings = await this.trainerRepository.findByTrainerId(trainerId);
+      return bookings.map((booking) => booking);
+    } catch (error) {
+      console.error("Error fetching trainer bookings:", error);
+      throw new Error("Failed to fetch trainer bookings");
+    }
+  }
+  async getBookingDetails(bookingId: string): Promise<IBooking | null> {
+    try {
+      const booking = await this.trainerRepository.findByBookingId(bookingId);
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+      return booking;
+    } catch (error) {
+      console.error("Error fetching booking details:", error);
+      throw new Error("Failed to fetch booking details");
+    }
+  }
+
+  async cancelBookingByTrainer(bookingId: string): Promise<IBooking> {
+    try {
+      // 1. Get booking details
+      const booking = await this.trainerRepository.findByBookingId(bookingId);
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+
+      if (booking.status === "cancelled") {
+        throw new Error("Booking already cancelled");
+      }
+
+      // 2. Update booking status
+      const updatedBooking = await this.trainerRepository.updateBookingStatus(
+        bookingId,
+        "cancelled"
+      );
+
+      // 3. Debit trainer wallet
+
+      const trainerId =
+        typeof booking.trainerId === "object"
+          ? (
+              booking.trainerId as { _id: mongoose.Types.ObjectId }
+            )._id.toString()
+          : (booking.trainerId as mongoose.Types.ObjectId).toString();
+
+          await this.trainerRepository.debit(
+            trainerId,
+            booking.amount,
+            booking._id.toString(),
+            "Session Cancelled"
+          );
+
+      return updatedBooking;
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      throw new Error("Failed to cancel booking");
+    }
+  }
+
+  async getWalletDetails(trainerId: string): Promise<WalletDetails>{
+    const [balance, transactions] = await Promise.all([
+      this.trainerRepository.getTrainerBalance(trainerId),
+      this.trainerRepository.getWalletTransactions(trainerId),
+    ]);
+  
+    return {
+      balance,
+      transactions,
+    };
+  };
 }

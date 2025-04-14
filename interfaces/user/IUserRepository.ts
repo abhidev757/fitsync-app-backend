@@ -4,6 +4,8 @@ import { IUser, IBlockedUserResponse,IUnblockedUserResponse, IUserProfile, Creat
 import { IUserFitness } from "../../types/userInfo.types";
 import { IBooking } from "../../models/bookingModel";
 import { IPayment } from "../../types/user.types";
+import { ISpecialization } from "../../types/specialization.types";
+import { UploadedFile } from "../../types/UploadedFile.types";
 
 export interface IUserRepository {
 createNewData(userData: Partial<IUser>): Promise<IUser | null>
@@ -23,4 +25,9 @@ findPaymentByStripeId(stripePaymentId: string): Promise<IPayment | null>;
 createBooking(bookingData: CreateBookingDto): Promise<IBooking>;
 findPaymentByStripeId(stripePaymentId: string): Promise<IPayment | null>;
 findByUserId(userId: string): Promise<IBooking[]>
+getAllSpecializations(): Promise<ISpecialization[]>
+updatePassword(userId: string, newHashedPassword: string): Promise<void>
+uploadProfile(file: Express.Multer.File): Promise<UploadedFile>
+updateUserProfilePic(userId: string, fileUrl: string): Promise<IUser | null> 
+creditTrainerWallet(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void>
 }

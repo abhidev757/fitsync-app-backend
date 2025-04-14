@@ -64,6 +64,8 @@ export class AdminController {
     updateUserStatus = asyncHandler(async (req: Request, res: Response) => {
         const { userId } = req.params;
         const { newStatus } = req.body;
+        console.log("isBlocked:",newStatus);
+        
         try {
             const updatedUser = await this.adminService.toggleUserStatus(userId, newStatus);
             res.status(HttpStatusCode.OK).json({ message: 'User status updated', user: updatedUser });
@@ -85,6 +87,8 @@ export class AdminController {
     updateTrainerStatus = asyncHandler(async (req: Request, res: Response) => {
         const { trainerId } = req.params;
         const { newStatus } = req.body;
+        console.log('isBlocked:',newStatus);
+        
         try {
             const updatedTrainer = await this.adminService.toggleTrainerStatus(trainerId, newStatus);
             res.status(HttpStatusCode.OK).json({ message: 'Trainer status updated', user: updatedTrainer });

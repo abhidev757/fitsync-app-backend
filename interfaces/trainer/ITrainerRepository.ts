@@ -1,4 +1,5 @@
 import { IBooking } from "../../models/bookingModel";
+import { IWalletTransaction } from "../../models/WalletModel";
 import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
 import { ITrainer, IBlockedTrainerResponse,IUnblockedTrainerResponse } from "../../types/trainer.types";
 import { UploadedFile } from "../../types/UploadedFile.types";
@@ -16,4 +17,8 @@ addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null>
 getTimeSlots(): Promise<DaySchedule[]>
 findByTrainerId(trainerId: string): Promise<IBooking[]>
 findByBookingId(bookingId: string): Promise<IBooking | null> 
+updateBookingStatus(bookingId: string, status: string): Promise<IBooking>
+debit(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void>
+getTrainerBalance(trainerId: string): Promise<number>
+getWalletTransactions(trainerId: string): Promise<IWalletTransaction[]>
 }

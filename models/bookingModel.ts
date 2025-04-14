@@ -1,8 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IBooking extends Document {
+  _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   trainerId: mongoose.Types.ObjectId;
+  clientName: string;
+  clientEmail: string;
   sessionTime: string;
   startDate: Date;
   endDate?: Date;
@@ -32,6 +35,8 @@ const BookingSchema: Schema = new Schema(
         message: "Invalid trainer ID format"
       }
     },
+    clientName: { type: String, required: true },
+    clientEmail: { type: String, required: true },
     sessionTime: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date },

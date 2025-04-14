@@ -1,6 +1,6 @@
 import { IBooking } from "../../models/bookingModel";
 import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
-import { ITrainer,IBlockedTrainerResponse,IUnblockedTrainerResponse, ITrainerProfile } from "../../types/trainer.types";
+import { ITrainer,IBlockedTrainerResponse,IUnblockedTrainerResponse, ITrainerProfile, WalletDetails } from "../../types/trainer.types";
 import { UploadedFile } from "../../types/UploadedFile.types";
 
 
@@ -20,4 +20,6 @@ export interface ITrainerService {
     getTimeSlots(): Promise<DaySchedule[]>
     getTrainerBookings(trainerId: string): Promise<IBooking[]>
     getBookingDetails(bookingId: string): Promise<IBooking | null>
+    cancelBookingByTrainer(bookingId: string): Promise<IBooking>
+    getWalletDetails(trainerId: string): Promise<WalletDetails>
 }

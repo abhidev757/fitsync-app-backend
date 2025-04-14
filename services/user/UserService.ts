@@ -14,12 +14,14 @@ import { sendResetEmail } from "../../utils/resetGmail";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { IUserFitness } from "../../types/userInfo.types";
-import { ITrainer,ITrainerProfile } from "../../types/trainer.types";
+import { ITrainer, ITrainerProfile } from "../../types/trainer.types";
 import Stripe from "stripe";
 import { IBooking } from "../../models/bookingModel";
 import mongoose from "mongoose";
-import { STRIPE_CONFIG } from "../../config/stripe";
-import { Types } from "aws-sdk/clients/acm";
+import { ISpecialization } from "../../types/specialization.types";
+import { UploadedFile } from "../../types/UploadedFile.types";
+
+const SALT_ROUNDS = 10;
 
 @injectable()
 export class UserService implements IUserService {
@@ -30,11 +32,10 @@ export class UserService implements IUserService {
     @inject("StripeConfig") private readonly config: Stripe.StripeConfig
   ) {
     if (!stripeSecretKey) {
-      throw new Error("STRIPE_SECRET_KEY is required"); 
+      throw new Error("STRIPE_SECRET_KEY is required");
     }
     this.stripe = new Stripe(stripeSecretKey, config);
   }
-
 
   async authenticateUser(
     email: string,
@@ -215,37 +216,38 @@ export class UserService implements IUserService {
       throw new Error("Failed to reset password");
     }
   }
-  
 
-  async getUserProfile(token: string):Promise<IUserProfile | null> {
-      console.log('serviceeee')
-      try {
-        const userProfile = await this.userRepository.findUserProfileById(token);
-        return userProfile;
-      } catch (error) {
-        throw new Error("Failed to fetch user profile");
-      }
+  async getUserProfile(token: string): Promise<IUserProfile | null> {
+    console.log("serviceeee");
+    try {
+      const userProfile = await this.userRepository.findUserProfileById(token);
+      return userProfile;
+    } catch (error) {
+      throw new Error("Failed to fetch user profile");
     }
-
-
-async updateUserAndFitness(
-  userId: string,
-  userData: Partial<IUser>,
-  fitnessData: Partial<IUserFitness>
-): Promise<{ user: IUser | null; fitness: IUserFitness | null }> {
-  try {
-    const updatedUser = await this.userRepository.update(userId, userData);
-
-    const updatedFitness = await this.userRepository.updateFitnessInfo(userId, fitnessData);
-
-    return { user: updatedUser, fitness: updatedFitness };
-  } catch (error) {
-    console.error("Error updating user and fitness data:", error);
-    throw new Error("Failed to update profile");
   }
-}
 
-async getAllTrainers(): Promise<ITrainer[]> {
+  async updateUserAndFitness(
+    userId: string,
+    userData: Partial<IUser>,
+    fitnessData: Partial<IUserFitness>
+  ): Promise<{ user: IUser | null; fitness: IUserFitness | null }> {
+    try {
+      const updatedUser = await this.userRepository.update(userId, userData);
+
+      const updatedFitness = await this.userRepository.updateFitnessInfo(
+        userId,
+        fitnessData
+      );
+
+      return { user: updatedUser, fitness: updatedFitness };
+    } catch (error) {
+      console.error("Error updating user and fitness data:", error);
+      throw new Error("Failed to update profile");
+    }
+  }
+
+  async getAllTrainers(): Promise<ITrainer[]> {
     try {
       return await this.userRepository.findAllTrainers();
     } catch (error) {
@@ -254,7 +256,7 @@ async getAllTrainers(): Promise<ITrainer[]> {
     }
   }
 
-  async getTrainer(userId: string):Promise<ITrainerProfile | null> {
+  async getTrainer(userId: string): Promise<ITrainerProfile | null> {
     try {
       const trainerProfile = await this.userRepository.findTrainerById(userId);
       return trainerProfile;
@@ -263,84 +265,130 @@ async getAllTrainers(): Promise<ITrainer[]> {
     }
   }
 
-  async createPaymentIntent(amount: number,trainerId: string,metadata: PaymentIntentMetadata): Promise<Stripe.PaymentIntent> {
-   
+  async createPaymentIntent(
+    amount: number,
+    trainerId: string,
+    metadata: PaymentIntentMetadata
+  ): Promise<Stripe.PaymentIntent> {
     const userId = new mongoose.Types.ObjectId(metadata.userId);
     const trainerObjectId = new mongoose.Types.ObjectId(trainerId);
-  
-   
+
     const dbPayment = await this.userRepository.createPayment({
       userId,
       trainerId: trainerObjectId,
-      amount: amount / 100,
+      amount: amount,
       currency: "usd",
       status: "requires_payment_method",
       metadata,
-      stripePaymentId: undefined 
+      stripePaymentId: "temp_" + new Date().getTime(),
     });
-  
-   
+
     const stripePI = await this.stripe.paymentIntents.create({
       amount,
       currency: "usd",
       metadata: {
         ...metadata,
-        internalPaymentId: dbPayment._id.toString()
+        internalPaymentId: dbPayment._id.toString(),
       },
     });
-  
+
     return stripePI;
   }
 
+  async createBooking(bookingData: any): Promise<IBooking> {
+    try {
+      const validatedData = {
+        clientName: bookingData.clientName,
+        clientEmail: bookingData.clientEmail,
+        userId: bookingData.user || bookingData.userId,
+        trainerId: bookingData.trainer || bookingData.trainerId,
+        sessionTime: bookingData.sessionTime,
+        startDate: bookingData.startDate,
+        isPackage: bookingData.isPackage,
+        paymentId: bookingData.paymentId,
+        amount: bookingData.amount,
+        status: "confirmed" as const,
+      };
 
-async createBooking(bookingData: any): Promise<IBooking> {
-  try {
-    
-    const validatedData = {
-      userId: bookingData.user || bookingData.userId,
-      trainerId: bookingData.trainer || bookingData.trainerId,
-      sessionTime: bookingData.sessionTime,
-      startDate: bookingData.startDate,
-      isPackage: bookingData.isPackage,
-      paymentId: bookingData.paymentId,
-      amount: bookingData.amount,
-      status: "confirmed" as const
-    };
+      if (!validatedData.userId || !validatedData.trainerId) {
+        throw new Error("Missing required fields: userId or trainerId");
+      }
 
-   
-    if (!validatedData.userId || !validatedData.trainerId) {
-      throw new Error("Missing required fields: userId or trainerId");
+      const processedData: CreateBookingDto = {
+        ...validatedData,
+        userId: new mongoose.Types.ObjectId(validatedData.userId),
+        trainerId: new mongoose.Types.ObjectId(validatedData.trainerId),
+        status: validatedData.status,
+      };
+
+      console.log("Processed booking data:", processedData);
+
+      const booking = await this.userRepository.createBooking(processedData);
+      
+      await this.userRepository.creditTrainerWallet(
+        processedData.trainerId.toString(),
+        processedData.amount,
+        booking._id.toString(),
+        'Session Booked'
+      );  
+      return booking.toObject();
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      throw new Error("Failed to create booking");
+    }
+  }
+
+  async getUserBookings(userId: string): Promise<IBooking[]> {
+    try {
+      const bookings = await this.userRepository.findByUserId(userId);
+      return bookings.map((booking) => booking);
+    } catch (error) {
+      console.error("Error fetching user bookings:", error);
+      throw new Error("Failed to fetch user bookings");
+    }
+  }
+
+  async getAllSpecializations(): Promise<ISpecialization[]> {
+    try {
+      return await this.userRepository.getAllSpecializations();
+    } catch (error) {
+      console.log(error);
+      throw new Error("Failed to retrieve Specializations");
+    }
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> {
+    // Retrieve the user by their id
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
     }
 
-    
-    const processedData: CreateBookingDto = {
-      ...validatedData,
-      userId: new mongoose.Types.ObjectId(validatedData.userId),
-      trainerId: new mongoose.Types.ObjectId(validatedData.trainerId),
-      status: validatedData.status
-    };
+    // Compare currentPassword with user's stored hashed password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new Error("Current password is incorrect");
+    }
 
-    console.log("Processed booking data:", processedData);
-    
-    const booking = await this.userRepository.createBooking(processedData);
-    return booking.toObject();
-  } catch (error) {
-    console.error("Error creating booking:", error);
-    throw new Error("Failed to create booking");
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Update the password in the repository
+    await this.userRepository.updatePassword(userId, hashedPassword);
+    return true;
+  }
+
+  async uploadProfile(file: Express.Multer.File,userId: string): Promise<UploadedFile> {
+    try {
+      const uploadedFile = await this.userRepository.uploadProfile(file);
+      await this.userRepository.updateUserProfilePic(userId, uploadedFile.fileUrl);
+      return uploadedFile;
+    } catch (error) {
+      throw new Error("Failed to upload certificate");
+    }
   }
 }
-
-async getUserBookings(userId: string): Promise<IBooking[]> {
-  try {
-    const bookings = await this.userRepository.findByUserId(userId);
-    return bookings.map(booking => booking);
-  } catch (error) {
-    console.error("Error fetching user bookings:", error);
-    throw new Error("Failed to fetch user bookings");
-  }
-}
-
-
-}
-
-

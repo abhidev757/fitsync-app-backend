@@ -308,7 +308,7 @@ export class TrainerController {
             }
           });
 
-          getTrainerBookings = async (req: Request, res: Response) => {
+          getTrainerBookings = asyncHandler(async (req: Request, res: Response) => {
             try {
               const trainerId = req.params.id;
               console.log("trainer ID: ", trainerId);
@@ -324,8 +324,9 @@ export class TrainerController {
             } catch (error) {
               res.status(500).json({ message: "Failed to fetch Bookings " });
             }
-          };
-          getBookingDetails = async (req: Request, res: Response) => {
+          });
+
+          getBookingDetails = asyncHandler(async (req: Request, res: Response) => {
             try {
               const bookingId = req.params.id;
               console.log("Booking ID: ", bookingId);
@@ -341,5 +342,31 @@ export class TrainerController {
             } catch (error) {
               res.status(500).json({ message: "Failed to fetch Bookings " });
             }
-          };
+          });
+
+          cancelBookingByTrainer = asyncHandler(async (req: Request, res: Response) => {
+            const { bookingId } = req.params;
+          
+            try {
+              const cancelledBooking = await this.trainerService.cancelBookingByTrainer(bookingId);
+              res.status(200).json({
+                message: "Booking cancelled successfully",
+                booking: cancelledBooking,
+              });
+            } catch (error) {
+              console.error("Error cancelling booking:", error);
+              res.status(500).json({ message: "Failed to cancel booking" });
+            }
+          });
+
+          getWalletDetails = asyncHandler(async (req: Request, res: Response) => {
+            const trainerId = req.params.id;
+            if (!trainerId) {
+              res.status(401);
+              throw new Error('Unauthorized');
+            }
+          
+            const walletData = await this.trainerService.getWalletDetails(trainerId);
+            res.json(walletData);
+          });
 }
