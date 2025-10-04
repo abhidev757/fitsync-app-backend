@@ -1,6 +1,7 @@
 import mongoose, {Document,ObjectId, Types} from "mongoose";
 import { ITimeSlots } from "./timeSlots.types";
 import { IWalletTransaction } from "../models/WalletModel";
+import { IUserWalletTransaction } from "../models/UserWallet";
 
 export interface ITrainer extends Document {
     _id: mongoose.Types.ObjectId;
@@ -63,4 +64,8 @@ export interface IUnblockedTrainerResponse {
 export interface WalletDetails {
     balance: number;
     transactions: IWalletTransaction[];
+  }
+export interface UserWalletDetails {
+    balance: number;
+    transactions: IUserWalletTransaction[];
   }

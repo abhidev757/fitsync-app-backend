@@ -32,7 +32,6 @@ router.post("/addTimeSlot",trainerProtect,checkRole(['trainer']),blockCheckMiddl
 router.get("/getTimeSlots",trainerProtect,checkRole(['trainer']),blockCheckMiddleware, trainerController.getTimeSlots);
 router.get("/get-trainerBookings/:id",trainerProtect,checkRole(['trainer']),blockCheckMiddleware, trainerController.getTrainerBookings);
 router.get("/get-bookings-details/:id",trainerProtect,checkRole(['trainer']),blockCheckMiddleware, trainerController.getBookingDetails);
-router.get("/get-bookings-details/:id",trainerProtect,checkRole(['trainer']),blockCheckMiddleware, trainerController.getBookingDetails);
 router.patch("/cancel-booking/:bookingId", trainerProtect,checkRole(['trainer']),trainerController.cancelBookingByTrainer);
 router.get('/wallet/:id',trainerProtect,checkRole(['trainer']),trainerController.getWalletDetails);
 

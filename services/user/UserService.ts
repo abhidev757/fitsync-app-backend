@@ -3,8 +3,6 @@ import { IUserService } from "../../interfaces/user/IUserService";
 import { IUserRepository } from "../../interfaces/user/IUserRepository";
 import {
   IUser,
-  IBlockedUserResponse,
-  IUnblockedUserResponse,
   IUserProfile,
   CreateBookingDto,
   PaymentIntentMetadata,
@@ -14,12 +12,16 @@ import { sendResetEmail } from "../../utils/resetGmail";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { IUserFitness } from "../../types/userInfo.types";
-import { ITrainer, ITrainerProfile } from "../../types/trainer.types";
+import { ITrainer, ITrainerProfile, UserWalletDetails } from "../../types/trainer.types";
 import Stripe from "stripe";
 import { IBooking } from "../../models/bookingModel";
 import mongoose from "mongoose";
 import { ISpecialization } from "../../types/specialization.types";
 import { UploadedFile } from "../../types/UploadedFile.types";
+import { IWaterLog } from "../../models/WaterLog";
+import { google, fitness_v1 } from 'googleapis';
+import { GaxiosResponse } from 'gaxios';
+import { IFitnessData } from "../../types/fitness.types";
 
 const SALT_ROUNDS = 10;
 
@@ -362,22 +364,21 @@ export class UserService implements IUserService {
     currentPassword: string,
     newPassword: string
   ): Promise<boolean> {
-    // Retrieve the user by their id
+   
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Compare currentPassword with user's stored hashed password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       throw new Error("Current password is incorrect");
     }
 
-    // Hash the new password
+
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
-    // Update the password in the repository
+    
     await this.userRepository.updatePassword(userId, hashedPassword);
     return true;
   }
@@ -391,4 +392,144 @@ export class UserService implements IUserService {
       throw new Error("Failed to upload certificate");
     }
   }
+
+  async getWalletDetails(userId: string): Promise<UserWalletDetails>{
+      const [balance, transactions] = await Promise.all([
+        this.userRepository.getUserBalance(userId),
+        this.userRepository.getWalletTransactions(userId),
+      ]);
+    
+      return {
+        balance,
+        transactions,
+      };
+    };
+
+
+    async getBookingDetails(bookingId: string): Promise<IBooking | null> {
+      try {
+        const booking = await this.userRepository.findByBookingId(bookingId);
+        if (!booking) {
+          throw new Error("Booking not found");
+        }
+        return booking;
+      } catch (error) {
+        console.error("Error fetching booking details:", error);
+        throw new Error("Failed to fetch booking details");
+      }
+    };
+
+    async cancelBookingByUser(bookingId: string): Promise<IBooking> {
+        try {
+          // Get booking details
+          const booking = await this.userRepository.findByBookingId(bookingId);
+          if (!booking) {
+            throw new Error("Booking not found");
+          }
+    
+          if (booking.status === "cancelled") {
+            throw new Error("Booking already cancelled");
+          }
+    
+          // Update booking status
+          const updatedBooking = await this.userRepository.updateBookingStatus(
+            bookingId,
+            "cancelled"
+          );
+    
+          // Debit trainer wallet
+    
+          const trainerId =
+            typeof booking.trainerId === "object"
+              ? (
+                  booking.trainerId as { _id: mongoose.Types.ObjectId }
+                )._id.toString()
+              : (booking.trainerId as mongoose.Types.ObjectId).toString();
+    
+              await this.userRepository.debit(
+                trainerId,
+                booking.amount,
+                booking._id.toString(),
+                "Session Cancelled"
+              );
+    
+          return updatedBooking;
+        } catch (error) {
+          console.error("Error cancelling booking:", error);
+          throw new Error("Failed to cancel booking");
+        }
+      }
+
+      async getWaterLog (userId: string, date: string): Promise<IWaterLog | null>{
+        return await this.userRepository.findWaterLog(userId, date)
+      };
+
+      async saveWaterLog  (userId: string, date: string, waterGlasses: number): Promise<IWaterLog>{
+        return await this.userRepository.upsertWaterLog(userId, date, waterGlasses)
+      };
+
+      async fetchAndSaveGoogleFitData(userId: string, accessToken: string):Promise<null> {
+        const oauth2Client = new google.auth.OAuth2();
+        oauth2Client.setCredentials({ access_token: accessToken });
+      
+        const fitness = google.fitness({ version: 'v1', auth: oauth2Client });
+      
+        const now = Date.now();
+        const start = now - 24 * 60 * 60 * 1000;
+      
+        const params: fitness_v1.Params$Resource$Users$Dataset$Aggregate = {
+          userId: 'me',
+          requestBody: {
+            aggregateBy: [
+              { dataTypeName: 'com.google.step_count.delta' },
+              { dataTypeName: 'com.google.calories.expended' },
+              { dataTypeName: 'com.google.sleep.segment' },
+            ],
+            bucketByTime: { durationMillis: `${86_400_000}` },
+            startTimeMillis: `${start}`,
+            endTimeMillis: `${now}`,
+          },
+        };
+      
+        const response: GaxiosResponse<fitness_v1.Schema$AggregateResponse> =
+          await fitness.users.dataset.aggregate(params);
+      
+        const buckets = response.data.bucket ?? [];
+      
+        let steps = 0, calories = 0, sleepMinutes = 0;
+        for (const bucket of buckets) {
+          for (const dataset of bucket.dataset || []) {
+            for (const point of dataset.point || []) {
+              switch (point.dataTypeName) {
+                case 'com.google.step_count.delta':
+                  steps += point.value?.[0]?.intVal || 0;
+                  break;
+                case 'com.google.calories.expended':
+                  calories += point.value?.[0]?.fpVal || 0;
+                  break;
+                case 'com.google.sleep.segment':
+                  sleepMinutes +=
+                    (Number(point.endTimeNanos) - Number(point.startTimeNanos)) /
+                    1e9 /
+                    60;
+                  break;
+              }
+            }
+          }
+        }
+      
+        const date = new Date().toISOString().slice(0, 10);
+        return this.userRepository.saveOrUpdate(userId, date, {
+          steps,
+          calories,
+          sleepMinutes,
+        });
+      };
+    
+      async getTodayData(userId: string):Promise<IFitnessData|null> {
+        const today = new Date().toISOString().slice(0, 10);
+        return this.userRepository.getByDate(userId, today);
+      }
+
+
 }

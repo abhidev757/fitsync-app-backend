@@ -52,10 +52,7 @@ export class AdminRepository
     }
   }
 
-  async updateUserStatus(
-    userId: string,
-    newStatus: boolean
-  ): Promise<IUser | null> {
+  async updateUserStatus(userId: string,newStatus: boolean): Promise<IUser | null> {
     try {
       const updatedUser = await this.userModel
         .findByIdAndUpdate(userId, { isBlocked: newStatus }, { new: true })
@@ -125,7 +122,7 @@ export class AdminRepository
         if (!Specialization) {
             throw new Error('Failed to add or update specialization');
         }
-
+ 
         return Specialization;
     } catch (error) {
         console.error('Error adding specialization:', error);

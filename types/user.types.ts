@@ -18,7 +18,11 @@ export interface IUser extends Document {
     status: boolean;
     otpExpiresAt: Date;
     phone: string;
+    balance: number;
     isBlocked: boolean;
+
+    googleTokens?: IGoogleTokens;
+
 
     matchPassword: (enteredPassword: string) => Promise<boolean>;
 }
@@ -110,4 +114,10 @@ export interface IBlockedUserResponse {
 export interface IUnblockedUserResponse {
     _id: string;
     blockedUsers: string[];
+}
+
+export interface IGoogleTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiryDate: number;    // or Date, but Google returns a numeric timestamp
 }

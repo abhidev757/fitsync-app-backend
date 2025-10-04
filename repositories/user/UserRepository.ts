@@ -12,7 +12,6 @@ import { BaseRepository } from "../base/BaseRepository";
 import { IUserRepository } from "../../interfaces/user/IUserRepository";
 import { IUserFitness } from "../../types/userInfo.types";
 import UserFitness from "../../models/UserInfo";
-import { HydratedDocument } from "mongoose";
 import TrainerModel from "../../models/TrainerModel";
 import timeSlotsModel from "../../models/timeSlotsModel";
 import { Booking } from "../../models/bookingModel";
@@ -24,14 +23,18 @@ import Specialization from "../../models/SpecializationModel";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { UploadedFile } from "../../types/UploadedFile.types";
 import WalletModel from "../../models/WalletModel";
+import UserWalletModel, { IUserWalletTransaction } from "../../models/UserWallet";
+import WaterLog, { IWaterLog } from "../../models/WaterLog";
+import HealthData from "../../models/HealthDataModel"
+import { IFitnessData } from "../../types/fitness.types";
 
 const s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  });
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 @injectable()
 export class UserRepository
@@ -46,6 +49,9 @@ export class UserRepository
   private readonly BookingModel = Booking;
   private readonly SpecializationModel = Specialization;
   private readonly WalletModel = WalletModel;
+  private readonly UserWalletModel = UserWalletModel;
+  private readonly WaterLogModel = WaterLog;
+  private readonly HealthDataModel = HealthData;
 
   constructor() {
     super(User);
@@ -144,7 +150,7 @@ export class UserRepository
         activity?: string;
         weight?: string;
         targetWeight?: string;
-        profileImageUrl?:string;
+        profileImageUrl?: string;
       }>();
       console.log("User fitness data from database:", userInfo);
 
@@ -162,7 +168,6 @@ export class UserRepository
         activity: userInfo?.activity || "N/A",
         weight: userInfo?.weight || "N/A",
         targetWeight: userInfo?.targetWeight || "N/A",
-
       };
 
       console.log("Combined user profile:", userProfile);
@@ -193,7 +198,7 @@ export class UserRepository
 
   async findAllTrainers(): Promise<ITrainer[]> {
     try {
-      return await this.TrainerModel.find().select(
+      return await this.TrainerModel.find({verificationStatus:true}).select(
         "name status yearsOfExperience specializations createdAt profileImageUrl"
       );
     } catch (error) {
@@ -283,9 +288,8 @@ export class UserRepository
     }
   }
 
-  async updateUserProfilePic(userId: string, fileUrl: string): Promise<IUser | null> {
+  async updateUserProfilePic(userId: string,fileUrl: string): Promise<IUser | null> {
     try {
-      // Using Mongoose's findByIdAndUpdate to update the avatar field
       const updatedUser = await this.UserModel.findByIdAndUpdate(
         userId,
         { profileImageUrl: fileUrl },
@@ -298,16 +302,119 @@ export class UserRepository
     }
   }
 
-  async creditTrainerWallet(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void> {
-    await this.TrainerModel.findByIdAndUpdate(trainerId, { $inc: { balance: amount } });
+  async creditTrainerWallet(
+    trainerId: string,
+    amount: number,
+    sessionId: string,
+    reason: string
+  ): Promise<void> {
+    await this.TrainerModel.findByIdAndUpdate(trainerId, {
+      $inc: { balance: amount },
+    });
     await this.WalletModel.create({
       trainerId,
       amount,
-      type: 'credit',
+      type: "credit",
       sessionId,
-      reason
+      reason,
     });
   }
 
+  async getUserBalance(userId: string): Promise<number> {
+    const user = await User.findById(userId);
+    return user?.balance ?? 0;
+  }
 
+  async getWalletTransactions(userId: string): Promise<IUserWalletTransaction[]> {
+    return await this.UserWalletModel.find({ userId }).sort({ createdAt: -1 });
+  }
+
+  async findByBookingId(bookingId: string): Promise<IBooking | null> {
+    const result = await this.BookingModel.findById(bookingId)
+      .populate("userId", "name email phone")
+      .populate(
+        "trainerId",
+        "name email phone profileImageUrl yearsOfExperience"
+      )
+      .exec();
+    return result;
+  }
+
+  async updateBookingStatus(bookingId: string,status: string): Promise<IBooking> {
+    const updatedBooking = await this.BookingModel.findByIdAndUpdate(
+      bookingId,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedBooking) {
+      throw new Error("Booking not found");
+    }
+
+    return updatedBooking;
+  }
+
+  async debit(trainerId: string,amount: number,sessionId: string,reason: string): Promise<void> {
+      const trainer = await TrainerModel.findById(trainerId);
+      if (!trainer || trainer.balance < amount) {
+        throw new Error("Insufficient balance");
+      }
+  
+      await TrainerModel.findByIdAndUpdate(trainerId, { $inc: { balance: -amount } });
+  
+      await this.WalletModel.create({
+        trainerId,
+        amount,
+        type: "debit",
+        sessionId,
+        reason,
+      });
+  
+      // 4. Fetch session to get userId
+      const session = await this.BookingModel.findById(sessionId);
+      if (!session) {
+        throw new Error("Session not found");
+      }
+  
+      const userId = session.userId;
+  
+      // 5. Credit to user
+      await this.UserModel.findByIdAndUpdate(userId, { $inc: { balance: amount } });
+  
+      // 6. Log user credit transaction
+      await this.UserWalletModel.create({
+        userId,
+        amount,
+        type: "credit",
+        sessionId,
+        reason: `Refund: ${reason}`,
+      });
+    }
+
+    async findWaterLog(userId: string, date: string): Promise<IWaterLog | null > {
+      return await this.WaterLogModel.findOne({ userId, date })
+    }
+
+
+    async upsertWaterLog (userId: string, date: string,  waterGlasses: number): Promise<IWaterLog> {
+      return await this.WaterLogModel.findOneAndUpdate(
+        { userId, date },
+        { $set: { waterGlasses } },
+        { upsert: true, new: true }
+      )
+    }
+
+    async saveOrUpdate(userId: string, date: string, data: { steps: number; calories: number; sleepMinutes: number }): Promise<null> {
+      return this.HealthDataModel.findOneAndUpdate(
+        { userId, date },
+        { $set: data },
+        { upsert: true, new: true }
+      );
+    };
+
+    async getByDate(userId: string, date: string):Promise<IFitnessData | null> {
+      return this.HealthDataModel.findOne({ userId, date });
+    }
+  
 }
+ 

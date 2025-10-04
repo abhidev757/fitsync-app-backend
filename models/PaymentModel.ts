@@ -31,7 +31,6 @@ const paymentSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Create a sparse unique index for stripePaymentId
 paymentSchema.index({ stripePaymentId: 1 }, { unique: true, sparse: true });
 
 export const PaymentModel = mongoose.model<IPayment>("Payment", paymentSchema);

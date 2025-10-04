@@ -1,14 +1,16 @@
 import Stripe from "stripe";
-import { ITrainer, ITrainerProfile } from "../../types/trainer.types";
+import { ITrainer, ITrainerProfile, UserWalletDetails } from "../../types/trainer.types";
 import { IUser,IBlockedUserResponse,IUnblockedUserResponse, IUserProfile, IUserFitnessResponse, PaymentIntentMetadata, CreateBookingDto } from "../../types/user.types";
 import { IUserFitness } from "../../types/userInfo.types";
 import { IBooking } from "../../models/bookingModel";
 import { ISpecialization } from "../../types/specialization.types";
 import { UploadedFile } from "../../types/UploadedFile.types";
+import { IWaterLog } from "../../models/WaterLog";
+import { IFitnessData } from "../../types/fitness.types";
 
 
 export interface IUserService {
-    authenticateUser(email: string, password: string): Promise<IUser | null>
+    authenticateUser(email: string, password: string): Promise<IUser | null>;
     registerUser(userData: Partial<IUser>): Promise<IUser | null>;
     getUserById(userId: string): Promise<IUser>
     resendOTP(email: string): Promise<{ success: boolean; message: string }>;
@@ -26,4 +28,15 @@ export interface IUserService {
     getAllSpecializations(): Promise<ISpecialization[]>
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean>
     uploadProfile(file: Express.Multer.File,userId: string): Promise<UploadedFile>
+    getWalletDetails(userId: string): Promise<UserWalletDetails>
+    getBookingDetails(bookingId: string): Promise<IBooking | null>
+    cancelBookingByUser(bookingId: string): Promise<IBooking>
+    getWaterLog (userId: string, date: string): Promise<IWaterLog | null>
+    saveWaterLog  (userId: string, date: string, waterGlasses: number): Promise<IWaterLog>
+    fetchAndSaveGoogleFitData(userId: string, accessToken: string):Promise<null>
+    getTodayData(userId: string):Promise<IFitnessData|null>
+
+
+
+
 }

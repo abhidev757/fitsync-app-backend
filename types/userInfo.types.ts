@@ -21,3 +21,5 @@ export interface IUserFitness {
     targetWeight: number;
     activity: string | null;
   }
+
+  

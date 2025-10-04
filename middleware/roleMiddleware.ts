@@ -11,7 +11,7 @@ interface AuthenticatedRequest extends Request {
 export const checkRole = (roles: string[]) => {
   return asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const currentUser = req.user || req.trainer || req.admin;
-
+      console.log("current user",currentUser);
     if (currentUser && roles.includes(currentUser.role)) {
       console.log(`${currentUser.role} role authorized`);
       return next();

@@ -270,11 +270,11 @@ export class TrainerService implements ITrainerService {
       console.error("Error fetching booking details:", error);
       throw new Error("Failed to fetch booking details");
     }
-  }
+  };
 
   async cancelBookingByTrainer(bookingId: string): Promise<IBooking> {
     try {
-      // 1. Get booking details
+      // Get booking details
       const booking = await this.trainerRepository.findByBookingId(bookingId);
       if (!booking) {
         throw new Error("Booking not found");
@@ -284,13 +284,13 @@ export class TrainerService implements ITrainerService {
         throw new Error("Booking already cancelled");
       }
 
-      // 2. Update booking status
+      // Update booking status
       const updatedBooking = await this.trainerRepository.updateBookingStatus(
         bookingId,
         "cancelled"
       );
 
-      // 3. Debit trainer wallet
+      // Debit trainer wallet
 
       const trainerId =
         typeof booking.trainerId === "object"

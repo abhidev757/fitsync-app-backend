@@ -4,11 +4,12 @@ import express, { Request, Response } from 'express';
 import adminRoutes from "./Routes/adminRoutes"
 import trainerRoutes from "./Routes/trainerRoutes"
 import userRoutes from "./Routes/userRoutes"
+import chatRoutes from "./Routes/chatRoutes"
 import cors from "cors"
 import morgan from "morgan"
 import cookieParser from "cookie-parser";
+import {app,server} from './config/socket'
 
-const app = express()
 
 
 const corsOptions = {
@@ -34,8 +35,9 @@ app.get('/',(req: Request,res: Response)=>{
 app.use("/api/admin", adminRoutes);
 app.use("/api/trainer", trainerRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/chat", chatRoutes);
 
-app.listen(PORT,()=>{
+server.listen(PORT,()=>{
     console.log(`Server is listening to port: ${PORT}`);
 })
 

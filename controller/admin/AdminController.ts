@@ -7,8 +7,6 @@ import { Request, Response } from "express";
 import AdminTokenService from '../../utils/adminTokenService'
 import { HttpStatusCode } from "../../enums/HttpStatusCode";
 import { StatusMessage } from "../../enums/StatusMessage";
-import { IUserService } from "../../interfaces/user/IUserService";
-import { UserService } from "../../services/user/UserService";
 
 
 

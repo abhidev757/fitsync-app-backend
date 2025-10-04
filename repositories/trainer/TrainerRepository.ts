@@ -1,229 +1,282 @@
 import { injectable } from "inversify";
 import mongoose, { Error } from "mongoose";
 import Trainer from "../../models/TrainerModel";
+import User from "../../models/UserModel";
 import TimeSlots from "../../models/timeSlotsModel";
-import { ITrainer, IBlockedTrainerResponse, IUnblockedTrainerResponse } from "../../types/trainer.types";
+import {
+  ITrainer,
+  IBlockedTrainerResponse,
+  IUnblockedTrainerResponse,
+} from "../../types/trainer.types";
 import { BaseRepository } from "../base/BaseRepository";
 import { ITrainerRepository } from "../../interfaces/trainer/ITrainerRepository";
 import { UploadedFile } from "../../types/UploadedFile.types";
-import { ObjectCannedACL, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../types/timeSlots.types";
+import {
+  ObjectCannedACL,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import {
+  DaySchedule,
+  ITimeSlotInput,
+  ITimeSlots,
+} from "../../types/timeSlots.types";
 import { Booking, IBooking } from "../../models/bookingModel";
 import WalletModel, { IWalletTransaction } from "../../models/WalletModel";
+import UserWalletModel from "../../models/UserWallet";
 
 const s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  });
-
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 @injectable()
-export class TrainerRepository extends BaseRepository<ITrainer> implements ITrainerRepository {
-    private readonly TrainerModel = Trainer;
-    private readonly TimeSlotModel = TimeSlots
-    private readonly BookingModel = Booking
-    private readonly WalletModel = WalletModel
+export class TrainerRepository
+  extends BaseRepository<ITrainer>
+  implements ITrainerRepository
+{
+  private readonly UserModel = User;
+  private readonly TrainerModel = Trainer;
+  private readonly TimeSlotModel = TimeSlots;
+  private readonly BookingModel = Booking;
+  private readonly WalletModel = WalletModel;
+  private readonly UserWalletModel = UserWalletModel;
 
-    constructor() {
-        super(Trainer)
+  constructor() {
+    super(Trainer);
+  }
+
+  async findByEmail(email: string): Promise<ITrainer | null> {
+    try {
+      return await this.TrainerModel.findOne({ email });
+    } catch (err) {
+      console.error("Error finding trainer by email:", err);
+      throw new Error("Failer to find trainer by email");
+    }
+  }
+
+  async register(trainerData: ITrainer): Promise<ITrainer | null> {
+    try {
+      const trainer = new this.TrainerModel(trainerData);
+      return await trainer.save();
+    } catch (err) {
+      console.error("Error finding trainer by ID:", err);
+      throw new Error("Failed to find trainer");
+    }
+  }
+
+  async findById(trainerId: string): Promise<ITrainer | null> {
+    try {
+      return await this.TrainerModel.findById(trainerId);
+    } catch (error) {
+      console.error("Error finding trainer by ID:", error);
+      throw new Error("Failed to find trainer");
+    }
+  }
+
+  async update(
+    userId: string,
+    data: Partial<ITrainer>
+  ): Promise<ITrainer | null> {
+    try {
+      return await this.TrainerModel.findByIdAndUpdate(
+        userId,
+        { $set: data },
+        { new: true }
+      );
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw new Error("Failed to update user");
+    }
+  }
+
+  async uploadCertificate(file: Express.Multer.File): Promise<UploadedFile> {
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME || "your-default-bucket-name",
+      Key: `certificates/${Date.now().toString()}-${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+
+    try {
+      const command = new PutObjectCommand(params);
+      await s3.send(command);
+
+      const fileUrl = `https://${params.Bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
+      return { fileUrl };
+    } catch (error) {
+      throw new Error("Failed to upload file to S3");
+    }
+  }
+  async uploadProfile(file: Express.Multer.File): Promise<UploadedFile> {
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME || "your-default-bucket-name",
+      Key: `profile-images/${Date.now().toString()}-${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+
+    try {
+      const command = new PutObjectCommand(params);
+      await s3.send(command);
+
+      const fileUrl = `https://${params.Bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
+      return { fileUrl };
+    } catch (error) {
+      throw new Error("Failed to upload file to S3");
+    }
+  }
+
+  async addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null> {
+    try {
+      // Convert DD/MM/YYYY to Date object
+      const parseDate = (dateString: string): Date => {
+        const [day, month, year] = dateString.split("/");
+        return new Date(`${year}-${month}-${day}`);
+      };
+
+      const timeSlot = new this.TimeSlotModel({
+        ...data,
+        startDate: parseDate(data.startDate as unknown as string),
+        endDate: parseDate(data.endDate as unknown as string),
+      });
+
+      return await timeSlot.save();
+    } catch (err) {
+      console.error("Error saving time slot:", err);
+      throw new Error("Failed to save time slot");
+    }
+  }
+  async getTimeSlots(): Promise<DaySchedule[]> {
+    try {
+      const results = await this.TimeSlotModel.aggregate([
+        {
+          $project: {
+            date: {
+              $dateToString: {
+                format: "%d %B %Y",
+                date: "$startDate",
+              },
+            },
+            time: 1,
+            sessionType: 1,
+          },
+        },
+        {
+          $group: {
+            _id: "$date",
+            slots: {
+              $push: {
+                time: "$time",
+                type: "$sessionType",
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            date: "$_id",
+            slots: 1,
+          },
+        },
+        { $sort: { date: 1 } },
+      ]);
+
+      return results;
+    } catch (err) {
+      console.error("Error fetching time slots:", err);
+      throw new Error("Failed to fetch time slots");
+    }
+  }
+
+  async findByTrainerId(trainerId: string): Promise<IBooking[]> {
+    return await this.BookingModel.find({ trainerId })
+      .populate("userId")
+      .lean()
+      .exec();
+  }
+  async findByBookingId(bookingId: string): Promise<IBooking | null> {
+    const result = await this.BookingModel.findById(bookingId)
+      .populate("userId", "name email phone")
+      .populate(
+        "trainerId",
+        "name email phone profileImageUrl yearsOfExperience"
+      )
+      .exec();
+    return result;
+  }
+
+  async updateBookingStatus(
+    bookingId: string,
+    status: string
+  ): Promise<IBooking> {
+    const updatedBooking = await this.BookingModel.findByIdAndUpdate(
+      bookingId,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedBooking) {
+      throw new Error("Booking not found");
     }
 
-    async findByEmail(email: string): Promise<ITrainer | null> {
-        try{
-            return await this.TrainerModel.findOne({email})
-        } catch(err) {
-            console.error('Error finding trainer by email:', err);
-            throw new Error('Failer to find trainer by email')
-        }
+    return updatedBooking;
+  }
+
+  async debit(
+    trainerId: string,
+    amount: number,
+    sessionId: string,
+    reason: string
+  ): Promise<void> {
+    const trainer = await Trainer.findById(trainerId);
+    if (!trainer || trainer.balance < amount) {
+      throw new Error("Insufficient balance");
     }
 
-    async register(trainerData: ITrainer): Promise<ITrainer | null> {
-        try {
-            const trainer = new this.TrainerModel(trainerData)
-            return await trainer.save();
-        } catch(err) {
-            console.error('Error finding trainer by ID:', err);
-            throw new Error('Failed to find trainer')
-        }
+    await Trainer.findByIdAndUpdate(trainerId, { $inc: { balance: -amount } });
+
+    await this.WalletModel.create({
+      trainerId,
+      amount,
+      type: "debit",
+      sessionId,
+      reason,
+    });
+
+    // 4. Fetch session to get userId
+    const session = await this.BookingModel.findById(sessionId);
+    if (!session) {
+      throw new Error("Session not found");
     }
 
-    async findById(trainerId: string): Promise<ITrainer | null> {
-        try {
-            return await this.TrainerModel.findById(trainerId);
-        } catch (error) {
-            console.error('Error finding trainer by ID:', error);
-            throw new Error('Failed to find trainer');
-        }
-    }
+    const userId = session.userId;
 
-    async update(userId: string, data: Partial<ITrainer>): Promise<ITrainer | null> {
-            try {
-                return await this.TrainerModel.findByIdAndUpdate(userId, { $set: data }, { new: true });
-            } catch (error) {
-                console.error('Error updating user:', error);
-                throw new Error('Failed to update user');
-            }
-        }
+    // 5. Credit to user
+    await this.UserModel.findByIdAndUpdate(userId, { $inc: { balance: amount } });
 
-        async uploadCertificate(file: Express.Multer.File): Promise<UploadedFile> {
-            const params = {
-              Bucket: process.env.AWS_S3_BUCKET_NAME || "your-default-bucket-name",
-              Key: `certificates/${Date.now().toString()}-${file.originalname}`,
-              Body: file.buffer,
-              ContentType: file.mimetype,
-            };
-        
-            try {
-              const command = new PutObjectCommand(params);
-              await s3.send(command);
-        
-              const fileUrl = `https://${params.Bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
-              return { fileUrl }; 
-            } catch (error) {
-              throw new Error("Failed to upload file to S3");
-            }
-          }
-        async uploadProfile(file: Express.Multer.File): Promise<UploadedFile> {
-            const params = {
-              Bucket: process.env.AWS_S3_BUCKET_NAME || "your-default-bucket-name",
-              Key: `profile-images/${Date.now().toString()}-${file.originalname}`,
-              Body: file.buffer,
-              ContentType: file.mimetype,
-            };
-        
-            try {
-              const command = new PutObjectCommand(params);
-              await s3.send(command);
-        
-              const fileUrl = `https://${params.Bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
-              return { fileUrl }; 
-            } catch (error) {
-              throw new Error("Failed to upload file to S3");
-            }
-          }
+    // 6. Log user credit transaction
+    await this.UserWalletModel.create({
+      userId,
+      amount,
+      type: "credit",
+      sessionId,
+      reason: `Refund: ${reason}`,
+    });
+  }
 
-          async addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null> {
-            try {
-                // Convert DD/MM/YYYY to Date object
-                const parseDate = (dateString: string): Date => {
-                    const [day, month, year] = dateString.split('/');
-                    return new Date(`${year}-${month}-${day}`);
-                };
-        
-                const timeSlot = new this.TimeSlotModel({
-                    ...data,
-                    startDate: parseDate(data.startDate as unknown as string),
-                    endDate: parseDate(data.endDate as unknown as string)
-                });
-        
-                return await timeSlot.save();
-            } catch(err) {
-                console.error('Error saving time slot:', err);
-                throw new Error('Failed to save time slot');
-            }
-        }
-        async getTimeSlots(): Promise<DaySchedule[]> {
-          try {
-              const results = await this.TimeSlotModel.aggregate([
-                  {
-                      $project: {
-                          date: {
-                              $dateToString: {
-                                  format: "%d %B %Y",
-                                  date: "$startDate"
-                              }
-                          },
-                          time: 1,
-                          sessionType: 1
-                      }
-                  },
-                  {
-                      $group: {
-                          _id: "$date",
-                          slots: {
-                              $push: {
-                                  time: "$time",
-                                  type: "$sessionType"
-                              }
-                          }
-                      }
-                  },
-                  {
-                      $project: {
-                          _id: 0,
-                          date: "$_id",
-                          slots: 1
-                      }
-                  },
-                  { $sort: { date: 1 } }
-              ]);
-      
-              return results;
-          } catch (err) {
-              console.error('Error fetching time slots:', err);
-              throw new Error('Failed to fetch time slots');
-          }
-      }
+  async getTrainerBalance(trainerId: string): Promise<number> {
+    const trainer = await Trainer.findById(trainerId);
+    return trainer?.balance ?? 0;
+  }
 
-
-      async findByTrainerId(trainerId: string): Promise<IBooking[]> {
-                  return await this.BookingModel.find({ trainerId })
-                    .populate('userId')
-                    .lean()
-                    .exec();
-                }
-      async findByBookingId(bookingId: string): Promise<IBooking | null> {
-          const result = await this.BookingModel.findById(bookingId)
-            .populate('userId', 'name email phone') 
-            .populate('trainerId', 'name email phone profileImageUrl yearsOfExperience') 
-            .exec();
-          return result;
-        }
-
-        async updateBookingStatus(bookingId: string, status: string): Promise<IBooking> {
-            const updatedBooking = await this.BookingModel.findByIdAndUpdate(
-              bookingId,
-              { status },
-              { new: true }
-            );
-          
-            if (!updatedBooking) {
-              throw new Error("Booking not found");
-            }
-          
-            return updatedBooking;
-          }
-          
-          
-
-          async debit(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void> {
-            const trainer = await Trainer.findById(trainerId);
-            if (!trainer || trainer.balance < amount) {
-              throw new Error('Insufficient balance');
-            }
-        
-            await Trainer.findByIdAndUpdate(trainerId, { $inc: { balance: -amount } });
-        
-             await this.WalletModel.create({
-              trainerId,
-              amount,
-              type: 'debit',
-              sessionId,
-              reason,
-            });
-          }
-        
-        async getTrainerBalance(trainerId: string): Promise<number> {
-            const trainer = await Trainer.findById(trainerId);
-            return trainer?.balance ?? 0;
-          };
-          
-        async getWalletTransactions(trainerId: string): Promise<IWalletTransaction[]> {
-            return await this.WalletModel.find({ trainerId }).sort({ createdAt: -1 });
-          };
-    
-                  
+  async getWalletTransactions(
+    trainerId: string
+  ): Promise<IWalletTransaction[]> {
+    return await this.WalletModel.find({ trainerId }).sort({ createdAt: -1 });
+  }
 }

@@ -25,6 +25,14 @@ import { UserService } from "../services/user/UserService";
 import { UserController } from "../controller/user/UserController";
 import { STRIPE_CONFIG } from "./stripe";
 
+//Chat
+import { IChatRepository } from "../interfaces/chat/IChatRepository";
+import { IChatService } from "../interfaces/chat/IChatService";
+import { ChatService } from "../services/chat/ChatService";
+import { ChatController } from "../controller/chat/ChatController";
+import { ChatRepository } from "../repositories/chat/ChatRepository";
+
+
 
 
 const container = new Container();
@@ -46,13 +54,20 @@ container.bind<TrainerController>('TrainerController').to(TrainerController).inS
 container.bind<IUserRepository>('IUserRepository').toDynamicValue(()=>{
     return new UserRepository()
 })
-
 container.bind<UserController>('UserController').to(UserController).inSingletonScope();
 container.bind<IUserService>('IUserService').to(UserService).inSingletonScope();
 container.bind<string>("StripeSecretKey")
   .toConstantValue(process.env.STRIPE_SECRET_KEY!);
-
 container.bind<typeof STRIPE_CONFIG>("StripeConfig")
   .toConstantValue(STRIPE_CONFIG);
+
+//Chat Container
+container.bind<IChatRepository>('IChatRepository').toDynamicValue(()=>{
+  return new ChatRepository()
+})
+container.bind<IChatService>('IChatService').to(ChatService).inSingletonScope();
+container.bind<ChatController>('ChatController').to(ChatController).inSingletonScope();
+
+
 
 export {container}

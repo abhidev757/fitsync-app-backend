@@ -2,23 +2,23 @@ import jwt from 'jsonwebtoken';
 import { Response } from 'express';
 
 interface TokenPayload {
-  userId: string;
+  trainerId: string;
   role: string
   tokenType: 'access' | 'refresh';
 }
 
 class TrainerTokenService {
-  static generateAccessToken(userId: string,role:string): string {
+  static generateAccessToken(trainerId: string,role:string): string {
     return jwt.sign(
-      { userId,role, tokenType: 'access' }, 
+      { trainerId,role, tokenType: 'access' }, 
       process.env.TRAINER_ACCESS_TOKEN_SECRET as string, 
       { expiresIn: '15m' }
     );
   }
 
-  static generateRefreshToken(userId: string,role:string): string {
+  static generateRefreshToken(trainerId: string,role:string): string {
     return jwt.sign(
-      { userId,role, tokenType: 'refresh' },
+      { trainerId,role, tokenType: 'refresh' },
       process.env.TRAINER_REFRESH_TOKEN_SECRET as string, 
       { expiresIn: '7d' }
     );

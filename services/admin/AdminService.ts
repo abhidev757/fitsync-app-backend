@@ -43,10 +43,7 @@ export class AdminService implements IAdminService {
     }
   }
 
-  async toggleUserStatus(
-    userId: string,
-    status: boolean
-  ): Promise<IUser | null> {
+  async toggleUserStatus(userId: string,status: boolean): Promise<IUser | null> {
     try {
       return await this.adminRepository.updateUserStatus(userId, status);
     } catch (error) {

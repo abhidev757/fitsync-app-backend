@@ -6,6 +6,9 @@ import { IBooking } from "../../models/bookingModel";
 import { IPayment } from "../../types/user.types";
 import { ISpecialization } from "../../types/specialization.types";
 import { UploadedFile } from "../../types/UploadedFile.types";
+import { IUserWalletTransaction } from "../../models/UserWallet";
+import { IWaterLog } from "../../models/WaterLog";
+import { IFitnessData } from "../../types/fitness.types";
 
 export interface IUserRepository {
 createNewData(userData: Partial<IUser>): Promise<IUser | null>
@@ -30,4 +33,18 @@ updatePassword(userId: string, newHashedPassword: string): Promise<void>
 uploadProfile(file: Express.Multer.File): Promise<UploadedFile>
 updateUserProfilePic(userId: string, fileUrl: string): Promise<IUser | null> 
 creditTrainerWallet(trainerId: string, amount: number, sessionId: string, reason: string): Promise<void>
+getUserBalance(userId: string): Promise<number>
+getWalletTransactions(userId: string): Promise<IUserWalletTransaction[]>
+findByBookingId(bookingId: string): Promise<IBooking | null>
+debit(trainerId: string,amount: number,sessionId: string,reason: string): Promise<void>
+updateBookingStatus(bookingId: string,status: string): Promise<IBooking>
+findWaterLog(userId: string, date: string): Promise<IWaterLog | null >
+upsertWaterLog (userId: string, date: string,  waterGlasses: number): Promise<IWaterLog>
+saveOrUpdate(userId: string, date: string, data: { steps: number; calories: number; sleepMinutes: number }): Promise<null>
+getByDate(userId: string, date: string):Promise<IFitnessData | null>
+
+
+
+
+
 }

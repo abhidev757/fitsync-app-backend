@@ -34,7 +34,19 @@ router.get("/get-bookings/:id",userProtect,checkRole(['user']),blockCheckMiddlew
 router.get("/fetchSpecializations",userProtect,checkRole(['user']),blockCheckMiddleware, userController.getAllSpecializations);
 router.post("/changePassword/:id",userProtect,checkRole(['user']),blockCheckMiddleware, userController.changePassword);
 router.post("/upload-profile/:userId",userProtect,checkRole(['user']),blockCheckMiddleware, upload.single("profileImage"), userController.uploadProfile);
+router.get('/wallet/:id',userProtect,checkRole(['user']),userController.getWalletDetails);
+router.get("/get-bookings-details/:id",userProtect,checkRole(['user']),blockCheckMiddleware, userController.getBookingDetails);
+router.patch("/cancel-booking/:bookingId", userProtect,checkRole(['user']),userController.cancelBookingByuser);
+router.get("/water", userProtect,checkRole(['user']),userController.getWater);
+router.post("/water", userProtect,checkRole(['user']),userController.updateWater);
+router.post("/sync-google-fit", userProtect,checkRole(['user']),userController.syncGoogleFitData);
+router.get("/health-today", userProtect,checkRole(['user']),userController.getTodayHealthData);
+
+
 
 // Google Login
 router.post('/auth/google', userController.googleAuth);
+router.post('/auth/google-fit/code',userProtect,checkRole(['user']),userController.googleAuthCode);
+router.post('/auth/google-fit/sync-fit',userProtect,checkRole(['user']),userController.syncGoogleFit);
+router.get('/auth/google-fit/health-today',userProtect,checkRole(['user']),userController.getTodayHealthData);
 export default router

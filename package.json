@@ -11,6 +11,7 @@
     "express": "^4.21.2",
     "express-async-handler": "^1.2.0",
     "google-auth-library": "^9.15.1",
+    "googleapis": "^148.0.0",
     "inversify": "^6.2.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
@@ -20,6 +21,7 @@
     "nodemailer": "^6.10.0",
     "nodemon": "^3.1.9",
     "reflect-metadata": "^0.2.2",
+    "socket.io": "^4.8.1",
     "stripe": "^17.7.0",
     "typescript": "^5.7.3"
   },

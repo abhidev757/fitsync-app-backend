@@ -1,6 +1,18 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcryptjs";
-import { IUser } from "../types/user.types";
+import { IGoogleTokens, IUser } from "../types/user.types";
+
+
+
+
+const GoogleTokensSchema = new Schema<IGoogleTokens>(
+  {
+    accessToken: { type: String, required: true },
+    refreshToken: { type: String, required: true },
+    expiryDate: { type: Number, required: true },
+  },
+  { _id: false }  // no separate _id for this subdocument
+);
 
 const UserSchema = new mongoose.Schema<IUser>(
   {
@@ -46,6 +58,11 @@ const UserSchema = new mongoose.Schema<IUser>(
     phone: {
       type: String,
     },
+    balance: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     otp: {
       type: String,
     },
@@ -55,6 +72,11 @@ const UserSchema = new mongoose.Schema<IUser>(
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    googleTokens: {
+      type: GoogleTokensSchema,
+      required: false,
+      default: null,
     },
   },
   {

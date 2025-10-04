@@ -17,6 +17,10 @@ interface CustomJwtPayload extends jwt.JwtPayload {
   userId: string;
 }
 
+interface AuthenticatedRequest extends Request {
+  user?: any;
+}
+
 @injectable()
 export class UserController {
   constructor(
@@ -284,24 +288,28 @@ export class UserController {
     }
   });
 
-  getUserDetails = asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const token = req.params.token;
-      console.log(token);
-      const userProfile = await this.userService.getUserProfile(token);
-      console.log("UserProfile", userProfile);
+  getUserDetails = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        
 
-      if (!userProfile) {
-        res.status(404).json({ message: "User not found" });
-        return;
+        const token = req.params.token;
+        
+        const userProfile = await this.userService.getUserProfile(token);
+        
+
+        if (!userProfile) {
+          res.status(404).json({ message: "User not found" });
+          return;
+        }
+
+        res.status(200).json(userProfile);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        res.status(500).json({ message: "Failed to fetch user profile" });
       }
-
-      res.status(200).json(userProfile);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ message: "Failed to fetch user profile" });
     }
-  });
+  );
 
   userEditProfile = asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -387,7 +395,6 @@ export class UserController {
 
   createBooking = asyncHandler(async (req: Request, res: Response) => {
     try {
-      console.log("Incoming booking data:", req.body);
       const bookingData = req.body;
       const booking = await this.userService.createBooking(bookingData);
       res.status(201).json(booking);
@@ -400,9 +407,7 @@ export class UserController {
   getUserBookings = asyncHandler(async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      console.log("user ID: ", userId);
       const Bookings = await this.userService.getUserBookings(userId);
-      console.log("Bookings:", Bookings);
 
       if (!Bookings) {
         res.status(404).json({ message: "Bookings not found" });
@@ -443,33 +448,204 @@ export class UserController {
           : "Unable to change password",
       });
     } catch (error: any) {
-      // If error thrown is due to wrong current password or other validation,
-      // send proper status code and message.
       res
         .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
         .json({ message: error.message || "Error changing password" });
     }
   });
 
-  uploadProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    if (!req.file) {
-      res.status(400).json({ message: "No file uploaded" });
-      return;
+  uploadProfile = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      if (!req.file) {
+        res.status(400).json({ message: "No file uploaded" });
+        return;
+      }
+      const userId = req.params.userId;
+      if (!userId) {
+        res.status(400).json({ message: "User ID is required" });
+        return;
+      }
+
+      try {
+        const uploadedFile = await this.userService.uploadProfile(
+          req.file,
+          userId
+        );
+        res
+          .status(200)
+          .json({ success: true, avatarUrl: uploadedFile.fileUrl });
+      } catch (error) {
+        res.status(500).json({ message: "File upload failed" });
+      }
     }
-    const userId = req.params.userId;
+  );
+
+  getWalletDetails = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.params.id;
     if (!userId) {
-      res.status(400).json({ message: "User ID is required" });
-      return;
+      res.status(401);
+      throw new Error("Unauthorized");
     }
-  
+
+    const walletData = await this.userService.getWalletDetails(userId);
+    
+
+    res.json(walletData);
+  });
+
+  getBookingDetails = asyncHandler(async (req: Request, res: Response) => {
     try {
-      const uploadedFile = await this.userService.uploadProfile(req.file, userId);
-      res.status(200).json({ success: true, avatarUrl: uploadedFile.fileUrl });
+      const bookingId = req.params.id;
+      const Bookings = await this.userService.getBookingDetails(bookingId);
+      
+
+      if (!Bookings) {
+        res.status(404).json({ message: "Bookings not found" });
+        return;
+      }
+
+      res.status(200).json(Bookings);
     } catch (error) {
-      res.status(500).json({ message: "File upload failed" });
+      res.status(500).json({ message: "Failed to fetch Bookings " });
     }
   });
-  
 
-  
+  cancelBookingByuser = asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+
+    try {
+      const cancelledBooking = await this.userService.cancelBookingByUser(
+        bookingId
+      );
+      res.status(200).json({
+        message: "Booking cancelled successfully",
+        booking: cancelledBooking,
+      });
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ message: "Failed to cancel booking" });
+    }
+  });
+
+  getWater = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, date } = req.query as { userId: string; date: string };
+
+    if (!userId || !date) {
+      res.status(400).json({ message: "userId and date are required" });
+      return;
+    }
+
+    try {
+      const log = await this.userService.getWaterLog(userId, date);
+      res.json({ waterGlasses: log?.waterGlasses || 0 });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to get water data" });
+    }
+  });
+
+  updateWater = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, date, waterGlasses } = req.body;
+
+    if (!userId || !date || waterGlasses === undefined) {
+      res
+        .status(400)
+        .json({ message: "userId, date, and waterGlasses are required" });
+      return;
+    }
+
+    try {
+      const log = await this.userService.saveWaterLog(
+        userId,
+        date,
+        waterGlasses
+      );
+      res.json({ message: "Water data updated", data: log });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to update water data" });
+    }
+  });
+
+  syncGoogleFitData = asyncHandler(async (req: Request, res: Response) => {
+    const { accessToken, userId } = req.body;
+    if (!accessToken || !userId) {
+      res.status(400).json({ message: "accessToken and userId required" });
+      return;
+    }
+
+    try {
+      const data = await this.userService.fetchAndSaveGoogleFitData(
+        userId,
+        accessToken
+      );
+      res.status(200).json({ message: "Synced", data });
+    } catch (err) {
+      console.error("Error syncing Google Fit data:", err);
+      res.status(500).json({ message: "Failed to sync data" });
+    }
+  });
+
+  getTodayHealthData = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ message: "userId required" });
+      return;
+    }
+
+    try {
+      const data = await this.userService.getTodayData(userId as string);
+      console.log("fitness dataaaaaaaa: ",data);
+      
+      res.status(200).json(data);
+    } catch (err) {
+      console.error("Error fetching health data:", err);
+      res.status(500).json({ message: "Failed to fetch data" });
+    }
+  });
+
+  googleAuthCode = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      // console.log("UserId", req.user._id);
+      const { code, redirectUri } = req.body;
+      const googleAuthService = new GoogleAuthService();
+      if (!code || !redirectUri) {
+        res.status(400).json({ message: "code and redirectUri required" });
+        return;
+      }
+
+      // delegate all Google Fit token logic to the service
+      await googleAuthService.exchangeCodeAndSaveFitTokens(
+        code,
+        req.user._id,
+        redirectUri
+      );
+
+      res.json({ message: "Google Fit connected" });
+    }
+  );
+
+  syncGoogleFit = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const userId = req.user._id; // set by userProtect middleware
+      // console.log("UserId:", userId);
+
+      const googleAuthService = new GoogleAuthService();
+      try {
+        // Delegate the fetch-and-save logic to the service
+        const updatedRecord = await googleAuthService.fetchAndSaveGoogleFitData(
+          userId
+        );
+        
+        res.status(200).json({
+          message: "Google Fit data synced",
+          data: updatedRecord,
+        });
+      } catch (err) {
+        console.error("Error syncing Google Fit data:", err);
+        res.status(500).json({ message: "Failed to sync Google Fit data" });
+      }
+    }
+  );
 }

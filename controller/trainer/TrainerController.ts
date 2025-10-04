@@ -77,7 +77,7 @@ export class TrainerController {
             res.status(401).json({message: 'Invalid refresh token'})
             return 
         } 
-        const trainer = await this.trainerService.getTrainerById(decoded.userId);
+        const trainer = await this.trainerService.getTrainerById(decoded.trainerId);
         if(!trainer) {
             res.status(401).json({message:'Trainer is not found'})
             return;
@@ -357,7 +357,7 @@ export class TrainerController {
               console.error("Error cancelling booking:", error);
               res.status(500).json({ message: "Failed to cancel booking" });
             }
-          });
+          }); 
 
           getWalletDetails = asyncHandler(async (req: Request, res: Response) => {
             const trainerId = req.params.id;
@@ -367,6 +367,8 @@ export class TrainerController {
             }
           
             const walletData = await this.trainerService.getWalletDetails(trainerId);
+            console.log('Wallet data:',walletData);
+            
             res.json(walletData);
           });
 }
