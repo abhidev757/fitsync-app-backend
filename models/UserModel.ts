@@ -48,7 +48,7 @@ const UserSchema = new mongoose.Schema<IUser>(
     },
     status: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     resetPassword: {
       token: { type: String, default: null },

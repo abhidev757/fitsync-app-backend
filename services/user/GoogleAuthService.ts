@@ -154,7 +154,7 @@ export class GoogleAuthService {
     const stepsCaloriesEnd = now;
 
     // Expanded window for sleep
-    const sleepWindowStart = startOfDay - 16 * 60 * 60 * 1000; // 16 hours before midnight
+    const sleepWindowStart = startOfDay - 6 * 60 * 60 * 1000; // 6 hours before midnight
     const sleepWindowEnd = now;
 
     // Preferred requests (try derived / aggregated sources first)
