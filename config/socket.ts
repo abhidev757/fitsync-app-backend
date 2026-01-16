@@ -72,6 +72,44 @@ io.on("connection", (socket) => {
         }
       }
     });
+
+
+    // 1. Participant enters a room
+socket.on("join-video-room", ({ sessionId, userId, name }) => {
+    socket.join(sessionId);
+    console.log(`User ${name} joined room ${sessionId}`); // Confirm this shows in Terminal
+
+    // Use socket.to() so only OTHER people in the room get this
+    socket.to(sessionId).emit("user-joined", {
+        fromSocketId: socket.id,
+        userId,
+        name
+    });
+});
+
+// 2. Relay the Offer (Peer A -> Server -> Peer B)
+socket.on("send-signal", ({ toSocketId, signal, fromName }) => {
+    io.to(toSocketId).emit("receive-signal", {
+        signal,
+        fromSocketId: socket.id,
+        fromName
+    });
+});
+
+// 3. Relay the Return Signal (Peer B -> Server -> Peer A)
+socket.on("return-signal", ({ toSocketId, signal }) => {
+    io.to(toSocketId).emit("receiving-returned-signal", {
+        signal,
+        fromSocketId: socket.id
+    });
+});
+
+// 4. Handle Disconnection
+socket.on("disconnect", () => {
+    // Standard cleanup
+    io.emit("user-disconnected", socket.id);
+});
+
   });
 
 export { io, app, server };
