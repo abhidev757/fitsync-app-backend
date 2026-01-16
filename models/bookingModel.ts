@@ -13,6 +13,8 @@ export interface IBooking extends Document {
   paymentId: string;
   amount: number;
   status: "pending" | "confirmed" | "cancelled" | "completed";
+  meetingStatus: "waiting" | "live" | "ended"; // Tracks the video call state
+  meetingId: string; // The room ID for WebRTC/Socket.io
 }
 
 const BookingSchema: Schema = new Schema(
@@ -47,6 +49,18 @@ const BookingSchema: Schema = new Schema(
       type: String,
       enum: ["pending", "confirmed", "cancelled", "completed"],
       default: "confirmed",
+    },
+    meetingStatus: {
+      type: String,
+      enum: ["waiting", "live", "ended"],
+      default: "waiting",
+    },
+    meetingId: { 
+      type: String, 
+      required: true,
+      default: function() {
+        return (this as any)._id.toString();
+      }
     },
   },
   { timestamps: true }

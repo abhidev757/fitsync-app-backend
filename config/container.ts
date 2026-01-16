@@ -51,6 +51,13 @@ import { ChatService } from "../services/chat/ChatService";
 import { ChatController } from "../controller/chat/ChatController";
 import { ChatRepository } from "../repositories/chat/ChatRepository";
 
+// ================= VIDEO =================
+import { IVideoRepository } from "../interfaces/video/IVideoRepository";
+import { VideoRepository } from "../repositories/video/VideoRepository";
+import { IVideoService } from "../interfaces/video/IVideoService";
+import { VideoService } from "../services/video/VideoService";
+import { VideoController } from "../controller/video/VideoController";
+
 // ================= USER =================
 
 // --- User Repository Interfaces ---
@@ -127,6 +134,11 @@ container.bind<TrainerPaymentController>(TrainerPaymentController).toSelf();
 container.bind<IChatRepository>('IChatRepository').toDynamicValue(() => new ChatRepository());
 container.bind<IChatService>('IChatService').to(ChatService).inSingletonScope();
 container.bind<ChatController>('ChatController').to(ChatController).inSingletonScope();
+
+// --- Video ---
+container.bind<IVideoRepository>('IVideoRepository').toDynamicValue(() => new VideoRepository());
+container.bind<IVideoService>('IVideoService').to(VideoService).inSingletonScope();
+container.bind<VideoController>(VideoController).toSelf();
 
 // --- User Repositories ---
 container.bind<IUserRepository>('IUserRepository').toDynamicValue(() => new UserRepository());
