@@ -3,4 +3,5 @@ import { DaySchedule, ITimeSlotInput, ITimeSlots } from "../../../types/timeSlot
 export interface ITrainerScheduleService {
     addTimeSlot(data: ITimeSlotInput): Promise<ITimeSlots | null>;
     getTimeSlots(): Promise<DaySchedule[]>;
+    deleteTimeSlot(id:string): Promise<boolean>;
 }
