@@ -14,7 +14,7 @@ export class TrainerScheduleService {
       return timeSlot;
     } catch (err) {
       console.log(err);
-      throw new Error("Failed to add Time slot");
+      throw new Error("Failed to fetch Time slot");
     }
   }
 
@@ -25,6 +25,19 @@ export class TrainerScheduleService {
     } catch (err) {
       console.log(err);
       throw new Error("Failed to add Time slot");
+    }
+  }
+
+  async deleteTimeSlot(id:string): Promise<boolean> {
+    try {
+      const success = await this.trainerScheduleRepository.deleteTimeSlot(id)
+      if(!success) {
+        throw new Error("Time slot not found or already deleted")
+      }
+      return success
+    } catch (err) {
+      console.error("Error in TrainerScheduleService (delete):",err)
+      throw err
     }
   }
 }
