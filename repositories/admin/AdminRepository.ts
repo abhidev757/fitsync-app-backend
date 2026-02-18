@@ -11,6 +11,8 @@ import Trainer from "../../models/TrainerModel";
 import Specialization from "../../models/SpecializationModel";
 import { ISpecialization } from "../../types/specialization.types";
 import { log } from "console";
+import PayoutRequest from "../../models/PayoutRequestModel";
+import WalletTransaction from "../../models/WalletModel";
 
 @injectable()
 export class AdminRepository
@@ -21,6 +23,8 @@ export class AdminRepository
   private readonly userModel = User;
   private readonly trainerModel = Trainer;
   private readonly specialization = Specialization;
+  private readonly payoutRequestModel = PayoutRequest;
+  private readonly walletTransactionModel = WalletTransaction;
   constructor() {
     super(Admin);
   }
@@ -198,5 +202,65 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
     }
   }
   
+
+
+  async getAllPayoutRequests(): Promise<any[]> {
+    try {
+      return await this.payoutRequestModel.find().populate('trainerId', 'name email').sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error fetching payout requests:", error);
+      throw new Error("Failed to fetch payout requests");
+    }
+  }
+
+  async approvePayoutRequest(requestId: string): Promise<void> {
+    try {
+      const request = await this.payoutRequestModel.findById(requestId);
+      if (!request || request.status !== 'pending') {
+        throw new Error("Invalid request or already processed");
+      }
+
+      const trainer = await this.trainerModel.findById(request.trainerId);
+      if (!trainer) {
+        throw new Error("Trainer not found");
+      }
+
+      if (trainer.balance < request.amount) {
+        throw new Error("Insufficient balance");
+      }
+
+      trainer.balance -= request.amount;
+      await trainer.save();
+
+      request.status = 'approved';
+      await request.save();
+
+      await this.walletTransactionModel.create({
+        trainerId: trainer._id,
+        amount: request.amount,
+        type: 'debit',
+        reason: 'Payout approved',
+        createdAt: new Date()
+      });
+
+    } catch (error) {
+      console.error("Error approving payout request:", error);
+      throw error;
+    }
+  }
+
+  async rejectPayoutRequest(requestId: string): Promise<void> {
+    try {
+      const request = await this.payoutRequestModel.findById(requestId);
+      if (!request || request.status !== 'pending') {
+        throw new Error("Invalid request or already processed");
+      }
+      request.status = 'rejected';
+      await request.save();
+    } catch (error) {
+      console.error("Error rejecting payout request:", error);
+      throw new Error("Failed to reject payout request");
+    }
+  }
 
 }

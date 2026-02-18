@@ -58,5 +58,6 @@ router.patch("/cancel-booking/:bookingId", trainerProtect, checkRole(['trainer']
 
 // --- PAYMENTS & WALLET (TrainerPaymentController) ---
 router.get('/wallet/:id', trainerProtect, checkRole(['trainer']), trainerPaymentController.getWalletDetails);
+router.post('/request-payout', trainerProtect, checkRole(['trainer']), trainerPaymentController.requestPayout);
 
 export default router;

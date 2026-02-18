@@ -161,4 +161,32 @@ async rejectTrainer(id: string,reason:string): Promise<void> {
 }
 
 
+
+  async getAllPayoutRequests(): Promise<any[]> {
+    try {
+      return await this.adminRepository.getAllPayoutRequests();
+    } catch (error) {
+      console.error("Error fetching payout requests:", error);
+      throw new Error("Failed to fetch payout requests");
+    }
+  }
+
+  async approvePayoutRequest(requestId: string): Promise<void> {
+    try {
+      await this.adminRepository.approvePayoutRequest(requestId);
+    } catch (error) {
+      console.error("Error approving payout request:", error);
+      throw new Error("Failed to approve payout request");
+    }
+  }
+
+  async rejectPayoutRequest(requestId: string): Promise<void> {
+    try {
+      await this.adminRepository.rejectPayoutRequest(requestId);
+    } catch (error) {
+      console.error("Error rejecting payout request:", error);
+      throw new Error("Failed to reject payout request");
+    }
+  }
 }
+

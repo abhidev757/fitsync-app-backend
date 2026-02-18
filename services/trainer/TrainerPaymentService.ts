@@ -19,4 +19,12 @@ export class TrainerPaymentService {
       transactions,
     };
   }
+
+  async requestPayout(trainerId: string, amount: number): Promise<void> {
+    const balance = await this.trainerPaymentRepository.getTrainerBalance(trainerId);
+    if (balance < amount) {
+        throw new Error("Insufficient balance");
+    }
+    await this.trainerPaymentRepository.createPayoutRequest(trainerId, amount);
+  }
 }
