@@ -208,4 +208,35 @@ export class AdminController {
         }
     });
     
+    approvePayoutRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requestId = req.params.id;
+            await this.adminService.approvePayoutRequest(requestId);
+            res.status(200).json({ message: "Payout request approved" });
+        } catch (error) {
+            console.error("Error approving payout request:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+
+    rejectPayoutRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requestId = req.params.id;
+            await this.adminService.rejectPayoutRequest(requestId);
+            res.status(200).json({ message: "Payout request rejected" });
+        } catch (error) {
+            console.error("Error rejecting payout request:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+
+    getAllPayoutRequests = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requests = await this.adminService.getAllPayoutRequests();
+            res.status(200).json(requests);
+        } catch (error) {
+            console.error("Error fetching payout requests:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
 }

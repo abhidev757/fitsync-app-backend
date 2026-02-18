@@ -7,6 +7,7 @@ import User from "../../models/UserModel";
 import { Booking } from "../../models/bookingModel";
 import { BaseRepository } from "../base/BaseRepository";
 import { ITrainerPaymentRepository } from "../../interfaces/trainer/repositories/ITrainerPaymentRepository";
+import PayoutRequest from "../../models/PayoutRequestModel";
 
 @injectable()
 export class TrainerPaymentRepository extends BaseRepository<any> implements ITrainerPaymentRepository {
@@ -15,6 +16,7 @@ export class TrainerPaymentRepository extends BaseRepository<any> implements ITr
     private readonly BookingModel = Booking;
     private readonly UserModel = User;
     private readonly UserWalletModel = UserWalletModel;
+    private readonly PayoutRequestModel = PayoutRequest;
 
     constructor() { super(WalletModel); }
 
@@ -59,6 +61,14 @@ export class TrainerPaymentRepository extends BaseRepository<any> implements ITr
             type: "credit",
             sessionId,
             reason: `Refund: ${reason}`,
+        });
+    }
+
+    async createPayoutRequest(trainerId: string, amount: number): Promise<void> {
+        await this.PayoutRequestModel.create({
+            trainerId,
+            amount,
+            status: 'pending'
         });
     }
 }

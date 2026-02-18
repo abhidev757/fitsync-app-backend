@@ -20,4 +20,7 @@ export interface IAdminService {
     getAllApplicants(): Promise<ITrainer[]>;
     approveTrainer(id: string): Promise<void>
     rejectTrainer(id: string,reason:string): Promise<void>
+    getAllPayoutRequests(): Promise<any[]>;
+    approvePayoutRequest(requestId: string): Promise<void>;
+    rejectPayoutRequest(requestId: string): Promise<void>;
 }

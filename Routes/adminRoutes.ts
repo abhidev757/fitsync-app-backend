@@ -28,6 +28,9 @@ router.put('/toggleSpecializationStatus',adminProtect,checkRole(['admin']), admi
 router.get('/fetchApplicants',adminProtect,checkRole(['admin']), adminController.getAllApplicants);
 router.put('/approveTrainer/:id',adminProtect,checkRole(['admin']),adminController.approveTrainer)
 router.put('/rejectTrainer/:id',adminProtect,checkRole(['admin']),adminController.rejectTrainer)
+router.get('/payout-requests',adminProtect,checkRole(['admin']),adminController.getAllPayoutRequests)
+router.put('/payout-request/:id/approve',adminProtect,checkRole(['admin']),adminController.approvePayoutRequest)
+router.put('/payout-request/:id/reject',adminProtect,checkRole(['admin']),adminController.rejectPayoutRequest)
 
 
 

@@ -10,7 +10,7 @@ export interface IWalletTransaction extends Document {
 }
 
 const WalletTransactionSchema: Schema = new Schema({
-  trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', required: true },
+  trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'trainer', required: true },
   amount: { type: Number, required: true },
   type: { type: String, enum: ['credit', 'debit'], required: true },
   reason: { type: String, required: true },
