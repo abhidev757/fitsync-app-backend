@@ -53,4 +53,12 @@ export class PaymentService {
 
     return { balance, transactions };
   }
+
+  async requestPayout(userId: string, amount: number): Promise<void> {
+    const balance = await this.paymentRepository.getUserBalance(userId);
+    if (balance < amount) {
+      throw new Error("Insufficient balance");
+    }
+    await this.paymentRepository.createPayoutRequest(userId, amount);
+  }
 }

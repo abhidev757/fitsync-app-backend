@@ -263,4 +263,57 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
     }
   }
 
+  private readonly userPayoutRequestModel = require("../../models/UserPayoutRequestModel").default;
+  private readonly userWalletTransactionModel = require("../../models/UserWallet").default;
+
+  async getAllUserPayoutRequests(): Promise<any[]> {
+    try {
+      return await this.userPayoutRequestModel.find().populate('userId', 'name email').sort({ createdAt: -1 });
+    } catch (error) {
+      console.error("Error fetching user payout requests:", error);
+      throw new Error("Failed to fetch user payout requests");
+    }
+  }
+
+  async approveUserPayoutRequest(requestId: string): Promise<void> {
+    try {
+      const request = await this.userPayoutRequestModel.findById(requestId);
+      if (!request || request.status !== 'pending') {
+        throw new Error("Invalid request or already processed");
+      }
+
+      const user = await this.userModel.findById(request.userId);
+      if (!user) throw new Error("User not found");
+
+      if (user.balance < request.amount) throw new Error("Insufficient balance");
+
+      user.balance -= request.amount;
+      await user.save();
+
+      request.status = 'approved';
+      await request.save();
+
+      await this.userWalletTransactionModel.create({
+        userId: user._id,
+        amount: request.amount,
+        type: 'debit',
+        reason: 'Payout approved',
+        createdAt: new Date()
+      });
+
+    } catch (error) {
+      console.error("Error approving user payout:", error);
+      throw error;
+    }
+  }
+
+  async rejectUserPayoutRequest(requestId: string): Promise<void> {
+    try {
+      await this.userPayoutRequestModel.findByIdAndUpdate(requestId, { status: 'rejected' });
+    } catch (error) {
+      console.error("Error rejecting user payout:", error);
+      throw error;
+    }
+  }
 }
+

@@ -57,6 +57,7 @@ router.patch("/cancel-booking/:bookingId", userProtect, checkRole(['user']), boo
 // --- PAYMENTS (PaymentController) ---
 router.post("/create-payment-intent", userProtect, checkRole(['user']), blockCheckMiddleware, paymentController.createPaymentIntent);
 router.get('/wallet/:id', userProtect, checkRole(['user']), paymentController.getWalletDetails);
+router.post('/request-payout', userProtect, checkRole(['user']), blockCheckMiddleware, paymentController.requestPayout);
 
 
 // --- FITNESS & GOOGLE FIT (FitnessController) ---

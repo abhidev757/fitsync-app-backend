@@ -56,4 +56,10 @@ export class PaymentRepository extends BaseRepository<IPayment> implements IPaym
         await this.UserModel.findByIdAndUpdate(userId, { $inc: { balance: amount } });
         await this.UserWalletModel.create({ userId, amount, type: "credit", sessionId, reason: `Refund: ${reason}` });
     }
+
+    private readonly UserPayoutRequestModel = require("../../models/UserPayoutRequestModel").default;
+
+    async createPayoutRequest(userId: string, amount: number): Promise<any> {
+        return await this.UserPayoutRequestModel.create({ userId, amount });
+    }
 }

@@ -31,7 +31,8 @@ router.put('/rejectTrainer/:id',adminProtect,checkRole(['admin']),adminControlle
 router.get('/payout-requests',adminProtect,checkRole(['admin']),adminController.getAllPayoutRequests)
 router.put('/payout-request/:id/approve',adminProtect,checkRole(['admin']),adminController.approvePayoutRequest)
 router.put('/payout-request/:id/reject',adminProtect,checkRole(['admin']),adminController.rejectPayoutRequest)
-
-
+router.get('/user-payout-requests',adminProtect,checkRole(['admin']),adminController.getAllUserPayoutRequests)
+router.put('/user-payout-request/:id/approve',adminProtect,checkRole(['admin']),adminController.approveUserPayoutRequest)
+router.put('/user-payout-request/:id/reject',adminProtect,checkRole(['admin']),adminController.rejectUserPayoutRequest)
 
 export default router;
