@@ -239,4 +239,36 @@ export class AdminController {
             res.status(500).json({ message: "Internal server error" });
         }
     });
+
+    approveUserPayoutRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requestId = req.params.id;
+            await this.adminService.approveUserPayoutRequest(requestId);
+            res.status(200).json({ message: "User payout request approved" });
+        } catch (error) {
+            console.error("Error approving user payout request:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+
+    rejectUserPayoutRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requestId = req.params.id;
+            await this.adminService.rejectUserPayoutRequest(requestId);
+            res.status(200).json({ message: "User payout request rejected" });
+        } catch (error) {
+            console.error("Error rejecting user payout request:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
+
+    getAllUserPayoutRequests = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+        try {
+            const requests = await this.adminService.getAllUserPayoutRequests();
+            res.status(200).json(requests);
+        } catch (error) {
+            console.error("Error fetching user payout requests:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
 }

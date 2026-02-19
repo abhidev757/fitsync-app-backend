@@ -43,4 +43,14 @@ export class PaymentController {
     const walletData = await this.paymentService.getWalletDetails(userId);
     res.json(walletData);
   });
+
+  requestPayout = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, amount } = req.body;
+    if (!userId || !amount) {
+        res.status(400);
+        throw new Error("Missing required fields");
+    }
+    await this.paymentService.requestPayout(userId, amount);
+    res.status(200).json({ message: "Payout request submitted" });
+  });
 }

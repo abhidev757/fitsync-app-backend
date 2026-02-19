@@ -23,4 +23,7 @@ export interface IAdminService {
     getAllPayoutRequests(): Promise<any[]>;
     approvePayoutRequest(requestId: string): Promise<void>;
     rejectPayoutRequest(requestId: string): Promise<void>;
+    getAllUserPayoutRequests(): Promise<any[]>;
+    approveUserPayoutRequest(requestId: string): Promise<void>;
+    rejectUserPayoutRequest(requestId: string): Promise<void>;
 }

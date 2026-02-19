@@ -188,5 +188,17 @@ async rejectTrainer(id: string,reason:string): Promise<void> {
       throw new Error("Failed to reject payout request");
     }
   }
+
+  async getAllUserPayoutRequests(): Promise<any[]> {
+    return await this.adminRepository.getAllUserPayoutRequests();
+  }
+
+  async approveUserPayoutRequest(requestId: string): Promise<void> {
+    return await this.adminRepository.approveUserPayoutRequest(requestId);
+  }
+
+  async rejectUserPayoutRequest(requestId: string): Promise<void> {
+    return await this.adminRepository.rejectUserPayoutRequest(requestId);
+  }
 }
 
