@@ -6,11 +6,14 @@ import { IAdminRepository } from "../../interfaces/admin/IAdminRepository";
 import { IUser } from "../../types/user.types";
 import { ITrainer } from "../../types/trainer.types";
 import { ISpecialization } from "../../types/specialization.types";
+import { INotificationService } from "../../interfaces/notification/services/INotificationService";
+import mongoose from "mongoose";
 
 @injectable()
 export class AdminService implements IAdminService {
   constructor(
-    @inject("IAdminRepository") private adminRepository: IAdminRepository
+    @inject("IAdminRepository") private adminRepository: IAdminRepository,
+    @inject("INotificationService") private notificationService: INotificationService
   ) {}
 
   async authenticateAdmin(
@@ -173,7 +176,18 @@ async rejectTrainer(id: string,reason:string): Promise<void> {
 
   async approvePayoutRequest(requestId: string): Promise<void> {
     try {
-      await this.adminRepository.approvePayoutRequest(requestId);
+      const request = await this.adminRepository.approvePayoutRequest(requestId);
+      
+      // Notify trainer
+      if (request && request.trainerId) {
+        await this.notificationService.createNotification({
+          recipientId: new mongoose.Types.ObjectId(request.trainerId.toString()),
+          recipientModel: "trainer",
+          type: "PAYOUT_APPROVED",
+          message: `Your payout request for $${request.amount} has been approved.`,
+          relatedId: new mongoose.Types.ObjectId(requestId),
+        });
+      }
     } catch (error) {
       console.error("Error approving payout request:", error);
       throw new Error("Failed to approve payout request");
@@ -194,7 +208,18 @@ async rejectTrainer(id: string,reason:string): Promise<void> {
   }
 
   async approveUserPayoutRequest(requestId: string): Promise<void> {
-    return await this.adminRepository.approveUserPayoutRequest(requestId);
+    const request = await this.adminRepository.approveUserPayoutRequest(requestId);
+    
+    // Notify user
+    if (request && request.userId) {
+      await this.notificationService.createNotification({
+        recipientId: new mongoose.Types.ObjectId(request.userId.toString()),
+        recipientModel: "user",
+        type: "PAYOUT_APPROVED",
+        message: `Your payout request for $${request.amount} has been approved.`,
+        relatedId: new mongoose.Types.ObjectId(requestId),
+      });
+    }
   }
 
   async rejectUserPayoutRequest(requestId: string): Promise<void> {

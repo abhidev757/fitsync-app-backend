@@ -2,13 +2,15 @@ import { inject, injectable } from "inversify";
 import { ITrainerBookingRepository } from "../../interfaces/trainer/repositories/ITrainerBookingRepository";
 import { ITrainerPaymentRepository } from "../../interfaces/trainer/repositories/ITrainerPaymentRepository";
 import { IBooking } from "../../models/bookingModel";
+import { INotificationService } from "../../interfaces/notification/services/INotificationService";
 import mongoose from "mongoose";
 
 @injectable()
 export class TrainerBookingService {
   constructor(
   @inject("ITrainerBookingRepository") private trainerBookingRepository: ITrainerBookingRepository,
-  @inject("ITrainerPaymentRepository") private trainerPaymentRepository: ITrainerPaymentRepository
+  @inject("ITrainerPaymentRepository") private trainerPaymentRepository: ITrainerPaymentRepository,
+  @inject("INotificationService") private notificationService: INotificationService
 ) {}
 
   async getTrainerBookings(trainerId: string): Promise<IBooking[]> {
@@ -62,6 +64,21 @@ export class TrainerBookingService {
         booking._id.toString(),
         "Session Cancelled"
       );
+
+      const userId =
+        typeof booking.userId === "object"
+          ? (booking.userId as { _id: mongoose.Types.ObjectId })._id.toString()
+          : (booking.userId as mongoose.Types.ObjectId)?.toString();
+
+      if (userId) {
+        await this.notificationService.createNotification({
+          recipientId: new mongoose.Types.ObjectId(userId),
+          recipientModel: "user",
+          type: "BOOKING_CANCELLED",
+          message: "Your booking was cancelled by the trainer.",
+          relatedId: booking._id as mongoose.Types.ObjectId,
+        });
+      }
 
       return updatedBooking;
     } catch (error) {

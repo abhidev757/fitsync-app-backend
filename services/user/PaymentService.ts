@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 import { IPaymentRepository } from "../../interfaces/user/repositories/IPaymentRepository";
 import { PaymentIntentMetadata } from "../../types/user.types";
 import { UserWalletDetails } from "../../types/trainer.types";
+import { INotificationService } from "../../interfaces/notification/services/INotificationService";
 import Stripe from "stripe";
 import mongoose from "mongoose";
 
@@ -11,7 +12,8 @@ export class PaymentService {
   constructor(
     @inject("IPaymentRepository") private paymentRepository: IPaymentRepository,
     @inject("StripeSecretKey") private readonly stripeSecretKey: string,
-    @inject("StripeConfig") private readonly config: Stripe.StripeConfig
+    @inject("StripeConfig") private readonly config: Stripe.StripeConfig,
+    @inject("INotificationService") private notificationService: INotificationService
   ) {
     if (!stripeSecretKey) {
       throw new Error("STRIPE_SECRET_KEY is required");
@@ -59,6 +61,14 @@ export class PaymentService {
     if (balance < amount) {
       throw new Error("Insufficient balance");
     }
-    await this.paymentRepository.createPayoutRequest(userId, amount);
+    const payoutReq = await this.paymentRepository.createPayoutRequest(userId, amount);
+    
+    // Notify admin
+    await this.notificationService.createNotification({
+      recipientId: new mongoose.Types.ObjectId(userId), // Dummy ID for admin broadcast
+      recipientModel: "admin",
+      type: "PAYOUT_REQUEST",
+      message: `User has requested a payout of $${amount}.`,
+    });
   }
 }

@@ -3,13 +3,15 @@ import { IBookingRepository } from "../../interfaces/user/repositories/IBookingR
 import { IPaymentRepository } from "../../interfaces/user/repositories/IPaymentRepository";
 import { CreateBookingDto } from "../../types/user.types";
 import { IBooking } from "../../models/bookingModel";
+import { INotificationService } from "../../interfaces/notification/services/INotificationService";
 import mongoose from "mongoose";
 
 @injectable()
 export class BookingService {
   constructor(
     @inject("IBookingRepository") private bookingRepository: IBookingRepository,
-    @inject("IPaymentRepository") private paymentRepository: IPaymentRepository
+    @inject("IPaymentRepository") private paymentRepository: IPaymentRepository,
+    @inject("INotificationService") private notificationService: INotificationService
   ) {}
 
   async createBooking(bookingData: any): Promise<IBooking> {
@@ -46,6 +48,16 @@ export class BookingService {
         booking._id.toString(),
         "Session Booked"
       );
+
+      // Trigger Notification
+      await this.notificationService.createNotification({
+        recipientId: new mongoose.Types.ObjectId(processedData.trainerId.toString()),
+        recipientModel: "trainer",
+        type: "BOOKING_CREATED",
+        message: `You have a new booking from ${validatedData.clientName}.`,
+        relatedId: booking._id as mongoose.Types.ObjectId,
+      });
+
       return booking.toObject();
     } catch (error) {
       console.error("Error creating booking:", error);

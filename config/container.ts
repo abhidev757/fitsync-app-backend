@@ -58,6 +58,13 @@ import { IVideoService } from "../interfaces/video/IVideoService";
 import { VideoService } from "../services/video/VideoService";
 import { VideoController } from "../controller/video/VideoController";
 
+// ================= NOTIFICATION =================
+import { INotificationRepository } from "../interfaces/notification/repositories/INotificationRepository";
+import { NotificationRepository } from "../repositories/notification/NotificationRepository";
+import { INotificationService } from "../interfaces/notification/services/INotificationService";
+import { NotificationService } from "../services/notification/NotificationService";
+import { NotificationController } from "../controller/notification/NotificationController";
+
 // ================= USER =================
 
 // --- User Repository Interfaces ---
@@ -139,6 +146,11 @@ container.bind<ChatController>('ChatController').to(ChatController).inSingletonS
 container.bind<IVideoRepository>('IVideoRepository').toDynamicValue(() => new VideoRepository());
 container.bind<IVideoService>('IVideoService').to(VideoService).inSingletonScope();
 container.bind<VideoController>(VideoController).toSelf();
+
+// --- Notification ---
+container.bind<INotificationRepository>('INotificationRepository').toDynamicValue(() => new NotificationRepository());
+container.bind<INotificationService>('INotificationService').to(NotificationService).inSingletonScope();
+container.bind<NotificationController>(NotificationController).toSelf();
 
 // --- User Repositories ---
 container.bind<IUserRepository>('IUserRepository').toDynamicValue(() => new UserRepository());

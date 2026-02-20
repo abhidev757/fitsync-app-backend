@@ -21,9 +21,9 @@ export interface IAdminRepository {
     approveTrainer(id: string): Promise<void>
     rejectTrainer(id: string,reason:string): Promise<void>
     getAllPayoutRequests(): Promise<any[]>;
-    approvePayoutRequest(requestId: string): Promise<void>;
+    approvePayoutRequest(requestId: string): Promise<any>;
     rejectPayoutRequest(requestId: string): Promise<void>;
     getAllUserPayoutRequests(): Promise<any[]>;
-    approveUserPayoutRequest(requestId: string): Promise<void>;
+    approveUserPayoutRequest(requestId: string): Promise<any>;
     rejectUserPayoutRequest(requestId: string): Promise<void>;
 }
