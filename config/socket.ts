@@ -14,6 +14,7 @@ const io = new Server(server, {
 
 const userSocketMap: Map<string, string> = new Map(); 
 const trainerSocketMap: Map<string, string> = new Map(); 
+const adminSocketMap: Map<string, string> = new Map();
 
 io.on("connection", (socket) => {
     console.log("🟢 New connection:", socket.id);
@@ -45,6 +46,12 @@ io.on("connection", (socket) => {
       io.emit("user-status-change", { userId: trainerId, isOnline: true });
 
     });
+
+    socket.on("register-admin", ({ adminId }) => {
+      adminSocketMap.set(adminId, socket.id);
+      console.log("Admin Socket Map:", adminSocketMap);
+      console.log("Admin connected:", adminId);
+    });
   
     // Handle private message
     socket.on("private-message", ({ toUserId, message }) => {
@@ -69,6 +76,12 @@ io.on("connection", (socket) => {
       for (const [trainerId, sockId] of trainerSocketMap.entries()) {
         if (sockId === socket.id) {
           trainerSocketMap.delete(trainerId);
+        }
+      }
+      // If it was an admin, remove
+      for (const [adminId, sockId] of adminSocketMap.entries()) {
+        if (sockId === socket.id) {
+          adminSocketMap.delete(adminId);
         }
       }
     });
@@ -112,4 +125,4 @@ socket.on("disconnect", () => {
 
   });
 
-export { io, app, server };
+export { io, app, server, userSocketMap, trainerSocketMap, adminSocketMap };

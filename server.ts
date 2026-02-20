@@ -6,6 +6,7 @@ import trainerRoutes from "./Routes/trainerRoutes"
 import userRoutes from "./Routes/userRoutes"
 import chatRoutes from "./Routes/chatRoutes"
 import videoRoutes from "./Routes/videoRoutes"
+import notificationRoutes from "./Routes/notificationRoutes"
 import cors from "cors"
 import morgan from "morgan"
 import cookieParser from "cookie-parser";
@@ -38,6 +39,7 @@ app.use("/api/trainer", trainerRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/video", videoRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 server.listen(PORT,()=>{
     console.log(`Server is listening to port: ${PORT}`);

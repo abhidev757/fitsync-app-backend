@@ -213,7 +213,7 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
     }
   }
 
-  async approvePayoutRequest(requestId: string): Promise<void> {
+  async approvePayoutRequest(requestId: string): Promise<any> {
     try {
       const request = await this.payoutRequestModel.findById(requestId);
       if (!request || request.status !== 'pending') {
@@ -242,6 +242,7 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
         reason: 'Payout approved',
         createdAt: new Date()
       });
+      return request;
 
     } catch (error) {
       console.error("Error approving payout request:", error);
@@ -275,7 +276,7 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
     }
   }
 
-  async approveUserPayoutRequest(requestId: string): Promise<void> {
+  async approveUserPayoutRequest(requestId: string): Promise<any> {
     try {
       const request = await this.userPayoutRequestModel.findById(requestId);
       if (!request || request.status !== 'pending') {
@@ -300,6 +301,7 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
         reason: 'Payout approved',
         createdAt: new Date()
       });
+      return request;
 
     } catch (error) {
       console.error("Error approving user payout:", error);
