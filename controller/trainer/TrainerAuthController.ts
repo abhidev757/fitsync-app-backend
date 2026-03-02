@@ -33,7 +33,8 @@ export class TrainerAuthController {
                 name: trainer.name,
                 email: trainer.email,
                 role: trainer.role,
-                isGoogleLogin: trainer.isGoogleLogin
+                isGoogleLogin: trainer.isGoogleLogin,
+                profileImageUrl: trainer.profileImageUrl
             });
 
         } catch (err) {
@@ -166,6 +167,7 @@ export class TrainerAuthController {
                 email: trainer.email,
                 role: trainer.role,
                 isGoogleLogin: trainer.isGoogleLogin,
+                profileImageUrl: trainer.profileImageUrl
             });
         } catch (error) {
             console.error('Google Auth Error:', error);

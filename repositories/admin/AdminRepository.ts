@@ -74,7 +74,7 @@ export class AdminRepository
     try {
       return await this.trainerModel
         .find()
-        .select("name status specializations createdAt");
+        .select("name status specializations isBlocked verificationStatus createdAt");
     } catch (error) {
       console.error("Error fetching users:", error);
       throw new Error("Error fetching users");
