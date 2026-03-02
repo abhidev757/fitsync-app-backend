@@ -50,4 +50,18 @@ export class TrainerBookingController {
             res.status(500).json({ message: "Failed to cancel booking" });
         }
     });
+
+    completeBookingByTrainer = asyncHandler(async (req: Request, res: Response) => {
+        const { bookingId } = req.params;
+        try {
+            const completedBooking = await this.trainerBookingService.completeSessionByTrainer(bookingId);
+            res.status(200).json({
+                message: "Session completed successfully",
+                booking: completedBooking,
+            });
+        } catch (error) {
+            console.error("Error completing session:", error);
+            res.status(500).json({ message: "Failed to complete session" });
+        }
+    });
 }

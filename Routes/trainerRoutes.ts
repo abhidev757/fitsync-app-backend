@@ -54,6 +54,7 @@ router.delete("/deleteTimeSlot/:id", trainerProtect, checkRole(['trainer']), blo
 router.get("/get-trainerBookings/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerBookingController.getTrainerBookings);
 router.get("/get-bookings-details/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerBookingController.getBookingDetails);
 router.patch("/cancel-booking/:bookingId", trainerProtect, checkRole(['trainer']), trainerBookingController.cancelBookingByTrainer);
+router.patch("/complete-session/:bookingId", trainerProtect, checkRole(['trainer']), trainerBookingController.completeBookingByTrainer);
 
 
 // --- PAYMENTS & WALLET (TrainerPaymentController) ---

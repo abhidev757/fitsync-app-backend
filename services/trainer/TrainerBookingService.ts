@@ -86,4 +86,37 @@ export class TrainerBookingService {
       throw new Error("Failed to cancel booking");
     }
   }
+
+  async completeSessionByTrainer(bookingId: string): Promise<IBooking> {
+    try {
+      const booking = await this.trainerBookingRepository.findByBookingId(bookingId);
+      if (!booking) throw new Error("Booking not found");
+      if (booking.status === "completed") throw new Error("Session already completed");
+
+      const updatedBooking = await this.trainerBookingRepository.updateBookingStatus(
+        bookingId,
+        "completed"
+      );
+
+      const userId =
+        typeof booking.userId === "object"
+          ? (booking.userId as { _id: mongoose.Types.ObjectId })._id.toString()
+          : (booking.userId as mongoose.Types.ObjectId)?.toString();
+
+      if (userId) {
+        await this.notificationService.createNotification({
+          recipientId: new mongoose.Types.ObjectId(userId),
+          recipientModel: "user",
+          type: "BOOKING_CANCELLED",
+          message: "Your training session has been completed by your trainer.",
+          relatedId: booking._id as mongoose.Types.ObjectId,
+        });
+      }
+
+      return updatedBooking;
+    } catch (error) {
+      console.error("Error completing session:", error);
+      throw new Error("Failed to complete session");
+    }
+  }
 }
