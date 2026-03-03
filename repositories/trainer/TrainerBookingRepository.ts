@@ -10,7 +10,7 @@ export class TrainerBookingRepository extends BaseRepository<IBooking> implement
     constructor() { super(Booking); }
 
     async findByTrainerId(trainerId: string): Promise<IBooking[]> {
-        return await this.BookingModel.find({ trainerId }).populate("userId").lean().exec();
+        return await this.BookingModel.find({ trainerId }).sort({ createdAt: -1 }).populate("userId").lean().exec();
     }
 
     async findByBookingId(bookingId: string): Promise<IBooking | null> {

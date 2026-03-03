@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { IFitnessRepository } from "../../interfaces/user/repositories/IFitnessRepository";
+import { IFitnessRepository, DashboardData } from "../../interfaces/user/repositories/IFitnessRepository";
 import { IUserFitness } from "../../types/userInfo.types";
 import { IWaterLog } from "../../models/WaterLog";
 import { IFitnessData } from "../../types/fitness.types";
@@ -91,5 +91,9 @@ export class FitnessService {
   async getTodayData(userId: string): Promise<IFitnessData | null> {
     const today = new Date().toISOString().slice(0, 10);
     return this.fitnessRepository.getByDate(userId, today);
+  }
+
+  async getDashboardData(userId: string, year: number, month: number): Promise<DashboardData> {
+    return this.fitnessRepository.getDashboardData(userId, year, month);
   }
 }

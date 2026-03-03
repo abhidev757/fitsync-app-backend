@@ -105,4 +105,17 @@ export class FitnessController {
       res.status(500).json({ message: "Failed to sync Google Fit data" });
     }
   });
+
+  getDashboardData = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?._id;
+    if (!userId) { res.status(401).json({ message: "Unauthorized" }); return; }
+
+    const now = new Date();
+    const year = parseInt(req.query.year as string) || now.getFullYear();
+    // month in query is 1-indexed (Jan=1), convert to 0-indexed for Date
+    const month = (parseInt(req.query.month as string) || now.getMonth() + 1) - 1;
+
+    const data = await (this.fitnessService as any).getDashboardData(userId.toString(), year, month);
+    res.status(200).json(data);
+  });
 }

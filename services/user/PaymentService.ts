@@ -57,18 +57,14 @@ export class PaymentService {
   }
 
   async requestPayout(userId: string, amount: number): Promise<void> {
-    const balance = await this.paymentRepository.getUserBalance(userId);
-    if (balance < amount) {
-      throw new Error("Insufficient balance");
-    }
-    const payoutReq = await this.paymentRepository.createPayoutRequest(userId, amount);
+    await this.paymentRepository.createPayoutRequest(userId, amount);
     
     // Notify admin
     await this.notificationService.createNotification({
-      recipientId: new mongoose.Types.ObjectId(userId), // Dummy ID for admin broadcast
+      recipientId: new mongoose.Types.ObjectId(userId),
       recipientModel: "admin",
       type: "PAYOUT_REQUEST",
-      message: `User has requested a payout of $${amount}.`,
+      message: `User has requested a payout of ₹${amount}.`,
     });
   }
 }

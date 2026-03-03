@@ -60,6 +60,25 @@ export class PaymentRepository extends BaseRepository<IPayment> implements IPaym
     private readonly UserPayoutRequestModel = require("../../models/UserPayoutRequestModel").default;
 
     async createPayoutRequest(userId: string, amount: number): Promise<any> {
-        return await this.UserPayoutRequestModel.create({ userId, amount });
+        const user = await this.UserModel.findById(userId);
+        if (!user || user.balance < amount) {
+            throw new Error("Insufficient balance");
+        }
+
+        // Debit balance immediately and record as 'pending'
+        await this.UserModel.findByIdAndUpdate(userId, { $inc: { balance: -amount } });
+
+        const walletEntry = await this.UserWalletModel.create({
+            userId,
+            amount,
+            type: 'pending',
+            reason: 'Payout request – awaiting admin approval',
+        });
+
+        return await this.UserPayoutRequestModel.create({
+            userId,
+            amount,
+            walletTransactionId: walletEntry._id,
+        });
     }
 }

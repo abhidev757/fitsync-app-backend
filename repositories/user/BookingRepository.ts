@@ -15,7 +15,7 @@ export class BookingRepository extends BaseRepository<IBooking> implements IBook
     }
 
     async findByUserId(userId: string): Promise<IBooking[]> {
-        return await this.BookingModel.find({ userId }).populate("trainerId").lean().exec();
+        return await this.BookingModel.find({ userId }).sort({ createdAt: -1 }).populate("trainerId").lean().exec();
     }
 
     async findByBookingId(bookingId: string): Promise<IBooking | null> {

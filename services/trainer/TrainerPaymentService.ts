@@ -24,18 +24,14 @@ export class TrainerPaymentService {
   }
 
   async requestPayout(trainerId: string, amount: number): Promise<void> {
-    const balance = await this.trainerPaymentRepository.getTrainerBalance(trainerId);
-    if (balance < amount) {
-        throw new Error("Insufficient balance");
-    }
     await this.trainerPaymentRepository.createPayoutRequest(trainerId, amount);
 
     // Notify admin
     await this.notificationService.createNotification({
-      recipientId: new mongoose.Types.ObjectId(trainerId), // Dummy ID since admin gets broadcasted
+      recipientId: new mongoose.Types.ObjectId(trainerId),
       recipientModel: "admin",
       type: "PAYOUT_REQUEST",
-      message: `Trainer has requested a payout of $${amount}.`,
+      message: `Trainer has requested a payout of ₹${amount}.`,
     });
   }
 }

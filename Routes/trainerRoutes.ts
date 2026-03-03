@@ -13,6 +13,7 @@ import { TrainerProfileController } from "../controller/trainer/TrainerProfileCo
 import { TrainerBookingController } from "../controller/trainer/TrainerBookingController";
 import { TrainerScheduleController } from "../controller/trainer/TrainerScheduleController";
 import { TrainerPaymentController } from "../controller/trainer/TrainerPaymentController";
+import { ReviewController } from "../controller/user/ReviewController";
 
 const upload = multer();
 const router = express.Router();
@@ -23,6 +24,7 @@ const trainerProfileController = container.get<TrainerProfileController>(Trainer
 const trainerBookingController = container.get<TrainerBookingController>(TrainerBookingController);
 const trainerScheduleController = container.get<TrainerScheduleController>(TrainerScheduleController);
 const trainerPaymentController = container.get<TrainerPaymentController>(TrainerPaymentController);
+const reviewController = container.get<ReviewController>(ReviewController);
 
 
 // --- AUTHENTICATION (TrainerAuthController) ---
@@ -46,6 +48,7 @@ router.put("/trainerEditProfile/:id", trainerProtect, checkRole(['trainer']), bl
 
 // --- SCHEDULING (TrainerScheduleController) ---
 router.post("/addTimeSlot", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.addTimeSlot);
+router.post("/addBulkTimeSlots", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.addBulkTimeSlots);
 router.get("/getTimeSlots", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.getTimeSlots);
 router.delete("/deleteTimeSlot/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.deleteTimeSlot);
 
@@ -60,5 +63,9 @@ router.patch("/complete-session/:bookingId", trainerProtect, checkRole(['trainer
 // --- PAYMENTS & WALLET (TrainerPaymentController) ---
 router.get('/wallet/:id', trainerProtect, checkRole(['trainer']), trainerPaymentController.getWalletDetails);
 router.post('/request-payout', trainerProtect, checkRole(['trainer']), trainerPaymentController.requestPayout);
+
+
+// --- REVIEWS ---
+router.get('/reviews/:trainerId', trainerProtect, checkRole(['trainer']), reviewController.getReviewsByTrainer);
 
 export default router;

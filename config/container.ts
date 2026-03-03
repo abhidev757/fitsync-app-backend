@@ -101,6 +101,13 @@ import { AuthController } from "../controller/user/AuthController";
 import { BookingController } from "../controller/user/BookingController";
 import { PaymentController } from "../controller/user/PaymentController";
 import { FitnessController } from "../controller/user/FitnessController";
+import { ReviewController } from "../controller/user/ReviewController";
+
+// --- Review ---
+import { IReviewRepository } from "../interfaces/user/repositories/IReviewRepository";
+import { IReviewService } from "../interfaces/user/services/IReviewService";
+import { ReviewRepository } from "../repositories/user/ReviewRepository";
+import { ReviewService } from "../services/user/ReviewService";
 
 // Config
 import { STRIPE_CONFIG } from "./stripe";
@@ -172,6 +179,11 @@ container.bind<AuthController>(AuthController).toSelf();
 container.bind<BookingController>(BookingController).toSelf();
 container.bind<PaymentController>(PaymentController).toSelf();
 container.bind<FitnessController>(FitnessController).toSelf();
+
+// --- Review ---
+container.bind<IReviewRepository>('IReviewRepository').toDynamicValue(() => new ReviewRepository());
+container.bind<IReviewService>('IReviewService').to(ReviewService).inSingletonScope();
+container.bind<ReviewController>(ReviewController).toSelf();
 
 // --- Config ---
 container.bind<string>("StripeSecretKey").toConstantValue(process.env.STRIPE_SECRET_KEY!);
