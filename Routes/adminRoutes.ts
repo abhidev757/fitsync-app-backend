@@ -1,14 +1,14 @@
 import express from 'express'
 import { AdminController } from '../controller/admin/AdminController';
+import { ReviewController } from '../controller/user/ReviewController';
 import { container } from '../config/container';
 import { adminProtect } from '../middleware/adminAuth';
 import { checkRole } from '../middleware/roleMiddleware';
+
 const router = express.Router();
 
-
 const adminController = container.get<AdminController>('AdminController')
-
-
+const reviewController = container.get<ReviewController>(ReviewController)
 
 //public routes
 router.post('/login', adminController.login)
@@ -34,5 +34,8 @@ router.put('/payout-request/:id/reject',adminProtect,checkRole(['admin']),adminC
 router.get('/user-payout-requests',adminProtect,checkRole(['admin']),adminController.getAllUserPayoutRequests)
 router.put('/user-payout-request/:id/approve',adminProtect,checkRole(['admin']),adminController.approveUserPayoutRequest)
 router.put('/user-payout-request/:id/reject',adminProtect,checkRole(['admin']),adminController.rejectUserPayoutRequest)
+
+// Trainer Reviews
+router.get('/trainer-reviews/:trainerId', adminProtect, checkRole(['admin']), reviewController.getReviewsByTrainer)
 
 export default router;

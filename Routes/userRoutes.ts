@@ -13,6 +13,7 @@ import { AuthController } from "../controller/user/AuthController";
 import { BookingController } from "../controller/user/BookingController";
 import { PaymentController } from "../controller/user/PaymentController";
 import { FitnessController } from "../controller/user/FitnessController";
+import { ReviewController } from "../controller/user/ReviewController";
 
 const upload = multer();
 const router = express.Router();
@@ -23,6 +24,7 @@ const authController = container.get<AuthController>(AuthController);
 const bookingController = container.get<BookingController>(BookingController);
 const paymentController = container.get<PaymentController>(PaymentController);
 const fitnessController = container.get<FitnessController>(FitnessController);
+const reviewController = container.get<ReviewController>(ReviewController);
 
 
 // --- AUTHENTICATION ROUTES (AuthController) ---
@@ -52,6 +54,11 @@ router.post("/create-bookings", userProtect, checkRole(['user']), blockCheckMidd
 router.get("/get-bookings/:id", userProtect, checkRole(['user']), blockCheckMiddleware, bookingController.getUserBookings);
 router.get("/get-bookings-details/:id", userProtect, checkRole(['user']), blockCheckMiddleware, bookingController.getBookingDetails);
 router.patch("/cancel-booking/:bookingId", userProtect, checkRole(['user']), bookingController.cancelBookingByuser);
+
+
+// --- REVIEWS ---
+router.post("/submit-review", userProtect, checkRole(['user']), blockCheckMiddleware, reviewController.submitReview);
+router.get("/review/:bookingId", userProtect, checkRole(['user']), reviewController.getReview);
 
 
 // --- PAYMENTS (PaymentController) ---
