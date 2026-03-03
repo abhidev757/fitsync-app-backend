@@ -3,16 +3,20 @@ import mongoose, { Model } from "mongoose";
 import UserFitness from "../../models/UserInfo";
 import WaterLog, { IWaterLog } from "../../models/WaterLog";
 import HealthData from "../../models/HealthDataModel";
+import UserModel from "../../models/UserModel";
+import { Booking } from "../../models/bookingModel";
 import { IUserFitness } from "../../types/userInfo.types";
 import { IFitnessData } from "../../types/fitness.types";
 import { BaseRepository } from "../base/BaseRepository";
-import { IFitnessRepository } from "../../interfaces/user/repositories/IFitnessRepository";
+import { IFitnessRepository, DashboardData } from "../../interfaces/user/repositories/IFitnessRepository";
 
 @injectable()
 export class FitnessRepository extends BaseRepository<IUserFitness> implements IFitnessRepository {
     private readonly UserFitnessModel = UserFitness;
     private readonly WaterLogModel = WaterLog;
     private readonly HealthDataModel = HealthData;
+    private readonly UserModel = UserModel;
+    private readonly BookingModel = Booking;
 
     constructor() { super(UserFitness as unknown as Model<IUserFitness>); }
 
@@ -51,5 +55,43 @@ export class FitnessRepository extends BaseRepository<IUserFitness> implements I
 
     async getByDate(userId: string, date: string): Promise<IFitnessData | null> {
         return this.HealthDataModel.findOne({ userId, date });
+    }
+
+    async getDashboardData(userId: string, year: number, month: number): Promise<DashboardData> {
+        // Month range (month is 0-indexed in JS Date)
+        const start = new Date(year, month, 1);
+        const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+        const [user, fitness, bookings] = await Promise.all([
+            this.UserModel.findById(userId).select("name profileImageUrl").lean(),
+            this.UserFitnessModel.findOne({ userId }).lean(),
+            this.BookingModel.find({
+                userId: new mongoose.Types.ObjectId(userId),
+                startDate: { $gte: start, $lte: end },
+                status: { $nin: ["cancelled"] },
+            }).select("startDate").lean(),
+        ]);
+
+        const appointmentDays = [...new Set(
+            bookings.map((b) => new Date(b.startDate).getDate())
+        )];
+
+        return {
+            user: {
+                name: user?.name ?? "User",
+                profileImageUrl: (user as any)?.profileImageUrl ?? null,
+            },
+            fitness: fitness
+                ? {
+                    age: (fitness as any).age,
+                    sex: (fitness as any).sex,
+                    weight: (fitness as any).weight,
+                    height: (fitness as any).height,
+                    targetWeight: (fitness as any).targetWeight,
+                    activity: (fitness as any).activity,
+                }
+                : null,
+            appointmentDays,
+        };
     }
 }

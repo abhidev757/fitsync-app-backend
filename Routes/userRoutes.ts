@@ -79,4 +79,7 @@ router.post('/auth/google-fit/code', userProtect, checkRole(['user']), fitnessCo
 router.post('/auth/google-fit/sync-fit', userProtect, checkRole(['user']), fitnessController.syncGoogleFit);
 router.get('/auth/google-fit/health-today', userProtect, checkRole(['user']), fitnessController.getTodayHealthData);
 
+// Dashboard – user profile + fitness info + appointment calendar
+router.get('/dashboard', userProtect, checkRole(['user']), blockCheckMiddleware, fitnessController.getDashboardData);
+
 export default router;

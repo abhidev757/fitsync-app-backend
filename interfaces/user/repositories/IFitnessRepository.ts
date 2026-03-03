@@ -2,6 +2,12 @@ import { IUserFitness } from "../../../types/userInfo.types";
 import { IWaterLog } from "../../../models/WaterLog";
 import { IFitnessData } from "../../../types/fitness.types";
 
+export interface DashboardData {
+    user: { name: string; profileImageUrl: string | null };
+    fitness: { age: number; sex: string; weight: number; height: number; targetWeight: number; activity: string } | null;
+    appointmentDays: number[];
+}
+
 export interface IFitnessRepository {
     saveFitnessInfo(fitnessData: IUserFitness): Promise<IUserFitness | null>;
     getFitnessInfo(userId: string): Promise<IUserFitness | null>;
@@ -10,4 +16,5 @@ export interface IFitnessRepository {
     upsertWaterLog(userId: string, date: string, waterGlasses: number): Promise<IWaterLog>;
     saveOrUpdate(userId: string, date: string, data: { steps: number; calories: number; sleepMinutes: number }): Promise<null>;
     getByDate(userId: string, date: string): Promise<IFitnessData | null>;
+    getDashboardData(userId: string, year: number, month: number): Promise<DashboardData>;
 }
