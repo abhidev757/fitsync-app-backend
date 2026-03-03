@@ -220,30 +220,16 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
         throw new Error("Invalid request or already processed");
       }
 
-      const trainer = await this.trainerModel.findById(request.trainerId);
-      if (!trainer) {
-        throw new Error("Trainer not found");
-      }
-
-      if (trainer.balance < request.amount) {
-        throw new Error("Insufficient balance");
-      }
-
-      trainer.balance -= request.amount;
-      await trainer.save();
+      // Balance was already debited at request time.
+      // Just update the pending wallet transaction → debit.
+      await this.walletTransactionModel.findOneAndUpdate(
+        { trainerId: request.trainerId, type: 'pending', amount: request.amount },
+        { type: 'debit', reason: 'Payout approved' }
+      );
 
       request.status = 'approved';
       await request.save();
-
-      await this.walletTransactionModel.create({
-        trainerId: trainer._id,
-        amount: request.amount,
-        type: 'debit',
-        reason: 'Payout approved',
-        createdAt: new Date()
-      });
       return request;
-
     } catch (error) {
       console.error("Error approving payout request:", error);
       throw error;
@@ -256,6 +242,16 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
       if (!request || request.status !== 'pending') {
         throw new Error("Invalid request or already processed");
       }
+
+      // Restore the debited balance back to the trainer
+      await this.trainerModel.findByIdAndUpdate(request.trainerId, { $inc: { balance: request.amount } });
+
+      // Update the pending transaction to reflect the refund
+      await this.walletTransactionModel.findOneAndUpdate(
+        { trainerId: request.trainerId, type: 'pending', amount: request.amount },
+        { type: 'credit', reason: 'Payout rejected – amount refunded' }
+      );
+
       request.status = 'rejected';
       await request.save();
     } catch (error) {
@@ -283,26 +279,16 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
         throw new Error("Invalid request or already processed");
       }
 
-      const user = await this.userModel.findById(request.userId);
-      if (!user) throw new Error("User not found");
-
-      if (user.balance < request.amount) throw new Error("Insufficient balance");
-
-      user.balance -= request.amount;
-      await user.save();
+      // Balance was already debited at request time.
+      // Just update the pending wallet transaction → debit.
+      await this.userWalletTransactionModel.findOneAndUpdate(
+        { userId: request.userId, type: 'pending', amount: request.amount },
+        { type: 'debit', reason: 'Payout approved' }
+      );
 
       request.status = 'approved';
       await request.save();
-
-      await this.userWalletTransactionModel.create({
-        userId: user._id,
-        amount: request.amount,
-        type: 'debit',
-        reason: 'Payout approved',
-        createdAt: new Date()
-      });
       return request;
-
     } catch (error) {
       console.error("Error approving user payout:", error);
       throw error;
@@ -311,6 +297,20 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
 
   async rejectUserPayoutRequest(requestId: string): Promise<void> {
     try {
+      const request = await this.userPayoutRequestModel.findById(requestId);
+      if (!request || request.status !== 'pending') {
+        throw new Error("Invalid request or already processed");
+      }
+
+      // Restore the debited balance back to the user
+      await this.userModel.findByIdAndUpdate(request.userId, { $inc: { balance: request.amount } });
+
+      // Update the pending transaction to reflect the refund
+      await this.userWalletTransactionModel.findOneAndUpdate(
+        { userId: request.userId, type: 'pending', amount: request.amount },
+        { type: 'credit', reason: 'Payout rejected – amount refunded' }
+      );
+
       await this.userPayoutRequestModel.findByIdAndUpdate(requestId, { status: 'rejected' });
     } catch (error) {
       console.error("Error rejecting user payout:", error);

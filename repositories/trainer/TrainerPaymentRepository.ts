@@ -65,10 +65,26 @@ export class TrainerPaymentRepository extends BaseRepository<any> implements ITr
     }
 
     async createPayoutRequest(trainerId: string, amount: number): Promise<void> {
+        const trainer = await this.TrainerModel.findById(trainerId);
+        if (!trainer || trainer.balance < amount) {
+            throw new Error("Insufficient balance");
+        }
+
+        // Debit balance immediately and record as 'pending'
+        await this.TrainerModel.findByIdAndUpdate(trainerId, { $inc: { balance: -amount } });
+
+        const walletEntry = await this.WalletModel.create({
+            trainerId,
+            amount,
+            type: 'pending',
+            reason: 'Payout request – awaiting admin approval',
+        });
+
         await this.PayoutRequestModel.create({
             trainerId,
             amount,
-            status: 'pending'
+            status: 'pending',
+            walletTransactionId: walletEntry._id,
         });
     }
 }
