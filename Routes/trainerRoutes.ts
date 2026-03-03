@@ -48,6 +48,7 @@ router.put("/trainerEditProfile/:id", trainerProtect, checkRole(['trainer']), bl
 
 // --- SCHEDULING (TrainerScheduleController) ---
 router.post("/addTimeSlot", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.addTimeSlot);
+router.post("/addBulkTimeSlots", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.addBulkTimeSlots);
 router.get("/getTimeSlots", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.getTimeSlots);
 router.delete("/deleteTimeSlot/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerScheduleController.deleteTimeSlot);
 
