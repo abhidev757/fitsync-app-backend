@@ -87,25 +87,27 @@ io.on("connection", (socket) => {
     });
 
 
-    // 1. Participant enters a room
-socket.on("join-video-room", ({ sessionId, userId, name }) => {
+// 1. Participant enters a room
+socket.on("join-video-room", ({ sessionId, userId, name, role }) => {
     socket.join(sessionId);
-    console.log(`User ${name} joined room ${sessionId}`); // Confirm this shows in Terminal
+    console.log(`User ${name} (${role}) joined room ${sessionId}`); // Confirm this shows in Terminal
 
     // Use socket.to() so only OTHER people in the room get this
     socket.to(sessionId).emit("user-joined", {
         fromSocketId: socket.id,
         userId,
-        name
+        name,
+        role
     });
 });
 
 // 2. Relay the Offer (Peer A -> Server -> Peer B)
-socket.on("send-signal", ({ toSocketId, signal, fromName }) => {
+socket.on("send-signal", ({ toSocketId, signal, fromName, role }) => {
     io.to(toSocketId).emit("receive-signal", {
         signal,
         fromSocketId: socket.id,
-        fromName
+        fromName,
+        role
     });
 });
 
