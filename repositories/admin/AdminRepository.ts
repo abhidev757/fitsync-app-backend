@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { injectable } from "inversify";
-import { IAdminRepository } from "../../interfaces/admin/IAdminRepository";
+import { IAdminRepository, AdminDashboardStats } from "../../interfaces/admin/IAdminRepository";
 import { IAdmin } from "../../types/admin.types";
 import Admin from "../../models/AdminModel";
 import User from "../../models/UserModel";
@@ -13,6 +13,7 @@ import { ISpecialization } from "../../types/specialization.types";
 import { log } from "console";
 import PayoutRequest from "../../models/PayoutRequestModel";
 import WalletTransaction from "../../models/WalletModel";
+import { PaymentModel } from "../../models/PaymentModel";
 
 @injectable()
 export class AdminRepository
@@ -317,5 +318,53 @@ async toggleSpecializationStatus(name: string, isBlock: boolean): Promise<ISpeci
       throw error;
     }
   }
+
+  async getDashboardStats(): Promise<AdminDashboardStats> {
+    const year = new Date().getFullYear();
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year + 1, 0, 1);
+
+    const [totalUsers, totalTrainers, revenueAgg, userGrowthAgg, revenueGrowthAgg] = await Promise.all([
+      this.userModel.countDocuments(),
+      this.trainerModel.countDocuments({ verificationStatus: true }),
+
+      // Total revenue
+      PaymentModel.aggregate([
+        { $group: { _id: null, total: { $sum: "$amount" } } }
+      ]),
+
+      // Monthly user sign-ups (current year)
+      this.userModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear, $lt: endOfYear } } },
+        { $group: { _id: { $month: "$createdAt" }, count: { $sum: 1 } } },
+      ]),
+
+      // Monthly revenue (current year)
+      PaymentModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear, $lt: endOfYear }, status: "success" } },
+        { $group: { _id: { $month: "$createdAt" }, total: { $sum: "$amount" } } },
+      ]),
+    ]);
+
+    // Build 12-slot arrays
+    const userGrowth = Array(12).fill(0);
+    for (const item of userGrowthAgg) {
+      userGrowth[(item._id as number) - 1] = item.count;
+    }
+
+    const revenueGrowth = Array(12).fill(0);
+    for (const item of revenueGrowthAgg) {
+      revenueGrowth[(item._id as number) - 1] = item.total;
+    }
+
+    return {
+      totalUsers,
+      totalTrainers,
+      totalRevenue: revenueAgg[0]?.total ?? 0,
+      userGrowth,
+      revenueGrowth,
+    };
+  }
 }
+
 

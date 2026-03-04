@@ -68,4 +68,7 @@ router.post('/request-payout', trainerProtect, checkRole(['trainer']), trainerPa
 // --- REVIEWS ---
 router.get('/reviews/:trainerId', trainerProtect, checkRole(['trainer']), reviewController.getReviewsByTrainer);
 
+// --- DASHBOARD STATS ---
+router.get('/dashboard-stats', trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerBookingController.getDashboardStats);
+
 export default router;

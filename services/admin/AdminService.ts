@@ -225,5 +225,8 @@ async rejectTrainer(id: string,reason:string): Promise<void> {
   async rejectUserPayoutRequest(requestId: string): Promise<void> {
     return await this.adminRepository.rejectUserPayoutRequest(requestId);
   }
-}
 
+  async getDashboardStats() {
+    return await this.adminRepository.getDashboardStats();
+  }
+}

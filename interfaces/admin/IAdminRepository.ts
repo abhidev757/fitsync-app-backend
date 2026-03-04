@@ -3,7 +3,13 @@ import { ISpecialization } from "../../types/specialization.types";
 import { ITrainer } from "../../types/trainer.types";
 import { IUser } from "../../types/user.types";
 
-
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalTrainers: number;
+  totalRevenue: number;
+  userGrowth: number[];    // 12 values, Jan-Dec for current year
+  revenueGrowth: number[]; // 12 values, Jan-Dec for current year
+}
 
 export interface IAdminRepository {
     authenticate(email: string): Promise<IAdmin | null>;
@@ -26,4 +32,5 @@ export interface IAdminRepository {
     getAllUserPayoutRequests(): Promise<any[]>;
     approveUserPayoutRequest(requestId: string): Promise<any>;
     rejectUserPayoutRequest(requestId: string): Promise<void>;
+    getDashboardStats(): Promise<AdminDashboardStats>;
 }

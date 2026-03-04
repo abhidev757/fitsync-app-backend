@@ -3,6 +3,7 @@ import { ISpecialization } from "../../types/specialization.types";
 import { ITimeSlots } from "../../types/timeSlots.types";
 import { ITrainer } from "../../types/trainer.types";
 import { IUser } from "../../types/user.types";
+import { AdminDashboardStats } from "../admin/IAdminRepository";
 
 
 export interface IAdminService {
@@ -26,4 +27,5 @@ export interface IAdminService {
     getAllUserPayoutRequests(): Promise<any[]>;
     approveUserPayoutRequest(requestId: string): Promise<void>;
     rejectUserPayoutRequest(requestId: string): Promise<void>;
+    getDashboardStats(): Promise<AdminDashboardStats>;
 }

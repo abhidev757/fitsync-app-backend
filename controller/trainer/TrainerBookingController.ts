@@ -64,4 +64,16 @@ export class TrainerBookingController {
             res.status(500).json({ message: "Failed to complete session" });
         }
     });
+
+    getDashboardStats = asyncHandler(async (req: any, res: Response) => {
+        try {
+            const trainerId = req.trainer?._id?.toString();
+            if (!trainerId) { res.status(401).json({ message: "Unauthorized" }); return; }
+            const stats = await this.trainerBookingService.getDashboardStats(trainerId);
+            res.status(200).json(stats);
+        } catch (error) {
+            console.error("Error fetching trainer dashboard stats:", error);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    });
 }
