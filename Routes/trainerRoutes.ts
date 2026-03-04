@@ -41,7 +41,8 @@ router.post('/auth/google', trainerAuthController.googleAuth);
 
 // --- PROFILE & UPLOADS (TrainerProfileController) ---
 router.post("/upload-certificate", upload.single("certificate"), trainerProfileController.uploadCertificate);
-router.post("/upload-profile", trainerProtect, checkRole(['trainer']), upload.single("profileImage"), trainerProfileController.uploadAndSaveProfile);
+router.post("/upload-profile", upload.single("profileImage"), trainerProfileController.uploadProfile);
+router.post("/upload-and-save-profile", trainerProtect, checkRole(['trainer']), upload.single("profileImage"), trainerProfileController.uploadAndSaveProfile);
 router.get("/getTrainerDetails/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerProfileController.getTrainerDetails);
 router.put("/trainerEditProfile/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerProfileController.trainerEditProfile);
 router.get("/specializations", trainerProfileController.getSpecializations);

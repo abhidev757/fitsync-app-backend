@@ -34,7 +34,8 @@ export class TrainerAuthController {
                 email: trainer.email,
                 role: trainer.role,
                 isGoogleLogin: trainer.isGoogleLogin,
-                profileImageUrl: trainer.profileImageUrl
+                profileImageUrl: trainer.profileImageUrl,
+                verificationStatus: trainer.verificationStatus
             });
 
         } catch (err) {
@@ -71,7 +72,18 @@ export class TrainerAuthController {
         }
         const newAccessToken = TrainerTokenService.generateAccessToken(trainer._id.toString(), trainer.role);
         TrainerTokenService.setTokenCookies(res, newAccessToken, refreshToken);
-        res.status(200).json({ message: 'Token refreshed successfully' });
+        res.status(200).json({ 
+            message: 'Token refreshed successfully',
+            trainer: {
+                _id: trainer._id,
+                name: trainer.name,
+                email: trainer.email,
+                role: trainer.role,
+                isGoogleLogin: trainer.isGoogleLogin,
+                profileImageUrl: trainer.profileImageUrl,
+                verificationStatus: trainer.verificationStatus
+            }
+        });
     });
 
     registerTrainer = asyncHandler(async (req: Request, res: Response) => {
@@ -145,14 +157,14 @@ export class TrainerAuthController {
 
     googleAuth = asyncHandler(async (req: Request, res: Response) => {
         try {
-            const { credential } = req.body;
+            const { credential, certificateUrl } = req.body;
             const trainerGoogleAuthService = new TrainerGoogleAuthService();
             const payload = await trainerGoogleAuthService.verifyGoogleToken(credential);
             if (!payload) {
                 res.status(HttpStatusCode.UNAUTHORIZED).json({ message: 'Invalid Google token' });
                 return;
             }
-            const trainer = await trainerGoogleAuthService.findOrCreateUser(payload);
+            const trainer = await trainerGoogleAuthService.findOrCreateUser(payload, certificateUrl);
             if (!trainer.status) {
                 res.status(HttpStatusCode.FORBIDDEN).json({ message: StatusMessage.ACCOUNT_BLOCKED });
                 return;
@@ -167,10 +179,15 @@ export class TrainerAuthController {
                 email: trainer.email,
                 role: trainer.role,
                 isGoogleLogin: trainer.isGoogleLogin,
-                profileImageUrl: trainer.profileImageUrl
+                profileImageUrl: trainer.profileImageUrl,
+                verificationStatus: trainer.verificationStatus
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Google Auth Error:', error);
+            if (error?.message === 'CERTIFICATE_REQUIRED') {
+                res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Certificate is required to register as a trainer.' });
+                return;
+            }
             res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ message: StatusMessage.INTERNAL_SERVER_ERROR });
         }
     });
