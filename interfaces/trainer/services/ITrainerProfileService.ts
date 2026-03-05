@@ -6,4 +6,7 @@ export interface ITrainerProfileService {
     updateTrainerProfile(userId: string, userData: Partial<ITrainer>): Promise<{ user: ITrainer | null }>;
     uploadCertificate(file: Express.Multer.File): Promise<UploadedFile>;
     uploadProfile(file: Express.Multer.File): Promise<UploadedFile>;
+    uploadAndSaveProfile(file: Express.Multer.File, trainerId: string): Promise<{ fileUrl: string }>;
+    getSpecializations(): Promise<{ _id: string; name: string }[]>;
+    getPerformanceStats(trainerId: string): Promise<{ labels: string[]; data: number[] }>;
 }

@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import asyncHandler from 'express-async-handler';
 import { inject, injectable } from "inversify";
 import { ITrainerProfileService } from "../../interfaces/trainer/services/ITrainerProfileService";
+import multer from "multer";
+
+const upload = multer();
 
 @injectable()
 export class TrainerProfileController {
@@ -68,6 +71,44 @@ export class TrainerProfileController {
             res.status(200).json({ fileUrl: uploadedFile.fileUrl });
         } catch (error) {
             res.status(500).json({ message: "File upload failed" });
+        }
+    });
+
+    // Upload profile image AND save the URL to the trainer document
+    uploadAndSaveProfile = asyncHandler(async (req: any, res: Response) => {
+        if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return;
+        }
+        try {
+            const trainerId = req.trainer?._id?.toString();
+            if (!trainerId) { res.status(401).json({ message: "Unauthorized" }); return; }
+            const result = await this.trainerProfileService.uploadAndSaveProfile(req.file, trainerId);
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ message: "Profile image upload failed" });
+        }
+    });
+
+    // List all active specializations (for the dropdown)
+    getSpecializations = asyncHandler(async (_req: Request, res: Response) => {
+        try {
+            const specializations = await this.trainerProfileService.getSpecializations();
+            res.status(200).json(specializations);
+        } catch (error) {
+            res.status(500).json({ message: "Failed to fetch specializations" });
+        }
+    });
+
+    // Monthly completed sessions for the last 6 months
+    getPerformanceStats = asyncHandler(async (req: any, res: Response) => {
+        try {
+            const trainerId = req.trainer?._id?.toString();
+            if (!trainerId) { res.status(401).json({ message: "Unauthorized" }); return; }
+            const stats = await this.trainerProfileService.getPerformanceStats(trainerId);
+            res.status(200).json(stats);
+        } catch (error) {
+            res.status(500).json({ message: "Failed to fetch performance stats" });
         }
     });
 }

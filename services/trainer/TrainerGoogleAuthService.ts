@@ -25,7 +25,7 @@ export class TrainerGoogleAuthService {
     }
   }
 
-  async findOrCreateUser(payload: any): Promise<ITrainer> {
+  async findOrCreateUser(payload: any, certificateUrl?: string): Promise<ITrainer> {
     try {
       if (!payload?.email) {
         throw new Error('No email found in Google payload');
@@ -33,18 +33,25 @@ export class TrainerGoogleAuthService {
 
       let user = await Trainer.findOne({ email: payload.email });
       if (!user) {
+        // New trainer — certificate is required
+        if (!certificateUrl) {
+          throw new Error('CERTIFICATE_REQUIRED');
+        }
         user = await Trainer.create({
           name: payload.name,
           email: payload.email,
           password: crypto.randomBytes(16).toString('hex'),
+          profileImageUrl: payload.picture || '',
+          certificateUrl,
           status: true,
-          isGoogleLogin:true,
+          isGoogleLogin: true,
           googleId: payload.sub,
         });
         return user;
-    }
+      }
 
-    user = await Trainer.findOneAndUpdate(
+      // Existing trainer signing in — just refresh the isGoogleLogin flag
+      user = await Trainer.findOneAndUpdate(
         { email: payload.email },
         { isGoogleLogin: true },
         { new: true }
@@ -53,11 +60,14 @@ export class TrainerGoogleAuthService {
       if (!user) {
         throw new Error('Failed to update existing user');
       }
-    return user;
-      
+      return user;
+
     } catch (error) {
       console.error('Error in findOrCreateUser:', error);
+      // Re-throw known errors so the controller can handle them
+      if ((error as Error).message === 'CERTIFICATE_REQUIRED') throw error;
       throw new Error('Error creating user from Google data');
     }
   }
 }
+

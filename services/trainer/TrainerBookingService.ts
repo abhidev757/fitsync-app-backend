@@ -119,4 +119,9 @@ export class TrainerBookingService {
       throw new Error("Failed to complete session");
     }
   }
+
+  async getDashboardStats(trainerId: string) {
+    return this.trainerBookingRepository.getDashboardStats(trainerId);
+  }
 }
+

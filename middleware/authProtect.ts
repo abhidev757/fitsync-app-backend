@@ -6,6 +6,8 @@ import TrainerTokenService from '../utils/TrainerTokenService';
 import User from '../models/UserModel';
 import Trainer from '../models/TrainerModel';
 
+import jwt from 'jsonwebtoken';
+
 interface AuthenticatedRequest extends Request {
   user?: any;
   trainer?: any;
@@ -13,11 +15,23 @@ interface AuthenticatedRequest extends Request {
 }
 
 const combinedProtect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  // read both user and trainer tokens from cookies
-  const userAccessToken = req.cookies.accessToken;
-  const userRefreshToken = req.cookies.refreshToken;
-  const trainerAccessToken = req.cookies.trainerAccessToken;
-  const trainerRefreshToken = req.cookies.trainerRefreshToken;
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+  let userAccessToken = req.cookies.accessToken;
+  let userRefreshToken = req.cookies.refreshToken;
+  let trainerAccessToken = req.cookies.trainerAccessToken;
+  let trainerRefreshToken = req.cookies.trainerRefreshToken;
+
+  // If we have a bearer token but no cookies, figure out who it belongs to
+  if (bearerToken) {
+    const decoded = jwt.decode(bearerToken) as { role?: string, userId?: string, trainerId?: string } | null;
+    if (decoded?.role === 'trainer' || decoded?.trainerId) {
+      trainerAccessToken = trainerAccessToken || bearerToken;
+    } else {
+      userAccessToken = userAccessToken || bearerToken;
+    }
+  }
 
   // 1. USER auth
   if (userAccessToken) {

@@ -42,8 +42,11 @@ router.post('/auth/google', trainerAuthController.googleAuth);
 // --- PROFILE & UPLOADS (TrainerProfileController) ---
 router.post("/upload-certificate", upload.single("certificate"), trainerProfileController.uploadCertificate);
 router.post("/upload-profile", upload.single("profileImage"), trainerProfileController.uploadProfile);
+router.post("/upload-and-save-profile", trainerProtect, checkRole(['trainer']), upload.single("profileImage"), trainerProfileController.uploadAndSaveProfile);
 router.get("/getTrainerDetails/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerProfileController.getTrainerDetails);
 router.put("/trainerEditProfile/:id", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerProfileController.trainerEditProfile);
+router.get("/specializations", trainerProfileController.getSpecializations);
+router.get("/performance-stats", trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerProfileController.getPerformanceStats);
 
 
 // --- SCHEDULING (TrainerScheduleController) ---
@@ -67,5 +70,8 @@ router.post('/request-payout', trainerProtect, checkRole(['trainer']), trainerPa
 
 // --- REVIEWS ---
 router.get('/reviews/:trainerId', trainerProtect, checkRole(['trainer']), reviewController.getReviewsByTrainer);
+
+// --- DASHBOARD STATS ---
+router.get('/dashboard-stats', trainerProtect, checkRole(['trainer']), blockCheckMiddleware, trainerBookingController.getDashboardStats);
 
 export default router;

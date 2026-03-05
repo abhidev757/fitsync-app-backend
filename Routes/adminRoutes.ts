@@ -38,4 +38,7 @@ router.put('/user-payout-request/:id/reject',adminProtect,checkRole(['admin']),a
 // Trainer Reviews
 router.get('/trainer-reviews/:trainerId', adminProtect, checkRole(['admin']), reviewController.getReviewsByTrainer)
 
+// Dashboard stats
+router.get('/dashboard-stats', adminProtect, checkRole(['admin']), adminController.getDashboardStats)
+
 export default router;

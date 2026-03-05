@@ -9,8 +9,11 @@ interface AuthenticatedRequest extends Request {
 }
 
 const trainerProtect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
-    const accessToken = req.cookies.trainerAccessToken;
+    const accessToken = req.cookies.trainerAccessToken || bearerToken;
     const refreshToken = req.cookies.trainerRefreshToken;    
 
   if (accessToken) {
