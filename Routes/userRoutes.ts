@@ -59,6 +59,7 @@ router.patch("/cancel-booking/:bookingId", userProtect, checkRole(['user']), boo
 // --- REVIEWS ---
 router.post("/submit-review", userProtect, checkRole(['user']), blockCheckMiddleware, reviewController.submitReview);
 router.get("/review/:bookingId", userProtect, checkRole(['user']), reviewController.getReview);
+router.get("/trainer-reviews/:trainerId", userProtect, checkRole(['user']), blockCheckMiddleware, reviewController.getReviewsByTrainer);
 
 
 // --- PAYMENTS (PaymentController) ---
