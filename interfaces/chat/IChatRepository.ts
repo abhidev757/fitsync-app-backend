@@ -5,7 +5,7 @@ import { IUser } from "../../types/user.types";
 
 
 export interface IChatRepository {
-findById(trainerId: string): Promise<IBooking[] | null>
+findById(trainerId: string): Promise<any[]>
 findMessages(myId: string,userToChatId: string): Promise<IMessage[] | null>
 uploadChatImage(file: Express.Multer.File): Promise<UploadedFile>
 createMessage(senderId:string,receiverId:string,text:string,imageUrl?:string): Promise<IMessage>
