@@ -28,30 +28,60 @@ export class ChatRepository
   }
 
 
-  async findById(trainerId: string): Promise<IBooking[] | null> {
+  async findById(trainerId: string): Promise<any[]> {
     try {
+      const trainerIdStr = trainerId.toString();
+      // 1. Find all users who have ever messaged this trainer
+      const messages = await this.MessageModel.find({
+        $or: [{ senderId: trainerId }, { receiverId: trainerId }],
+      }).sort({ createdAt: -1 });
+
+      const userMessageData = new Map<string, { lastMessage: string; lastMessageTime: string }>();
+
+      for (const msg of messages) {
+        const otherUserId = msg.senderId.toString() === trainerIdStr ? msg.receiverId.toString() : msg.senderId.toString();
+        if (!userMessageData.has(otherUserId)) {
+          const formattedTime = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+          userMessageData.set(otherUserId, {
+            lastMessage: msg.text || (msg.imageUrl ? "Sent an image" : "Message attached"),
+            lastMessageTime: formattedTime,
+          });
+        }
+      }
+
+      // 2. Fallback to including users who booked but haven't chatted yet
+      const bookings = await this.BookingModel.find({ trainerId }).populate<{ userId: IUser }>('userId', '-password');
       
-      const bookings = await this.BookingModel
-        .find({ trainerId })                          
-        .populate<{ userId: IBooking }>('userId', '-password'); 
+      const allUserIds = new Set<string>(userMessageData.keys());
+      bookings.forEach(b => {
+        if (b.userId && b.userId._id) {
+            allUserIds.add(b.userId._id.toString());
+        }
+      });
 
-      if (!bookings.length) {
-        return null;
+      if (allUserIds.size === 0) {
+        return [];
       }
 
-    
-      const users = bookings
-        .map(b => b.userId)
-        .filter((user, idx, arr) =>
-          arr.findIndex(u => u._id.toString() === user._id.toString()) === idx
-        );
+      // 3. Fetch user details
+      const users = await this.UserModel.find({ _id: { $in: Array.from(allUserIds) } });
 
-      return users;
-      } catch (error) {
-        console.error("Error finding User by ID:", error);
-        throw new Error("Failed to find User");
-      }
+      // 4. Merge data
+      return users.map(user => {
+        const msgData = userMessageData.get(user._id.toString()) || { lastMessage: "", lastMessageTime: "" };
+        const userObj = user.toObject();
+        return {
+          ...userObj,
+          lastMessage: msgData.lastMessage,
+          lastMessageTime: msgData.lastMessageTime,
+        };
+      });
+      
+    } catch (error) {
+      console.error("Error finding active chats:", error);
+      throw new Error("Failed to find active chats");
     }
+  }
     
   async findMessages(myId: string,userToChatId: string): Promise<IMessage[] | null> {
       try {

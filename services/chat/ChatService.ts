@@ -11,7 +11,7 @@ export class ChatService implements IChatService {
     @inject("IChatRepository") private chatRepository: IChatRepository
   ) {}
 
-  async getUserById(userId: string): Promise<IBooking[]> {
+  async getUserById(userId: string): Promise<any[]> {
     try {
       const user = await this.chatRepository.findById(userId);
       if (!user) {

@@ -72,10 +72,11 @@ io.on("connection", (socket) => {
           io.emit("user-status-change", { userId, isOnline: false });
         }
       }
-      // If it was a trainer, just remove
+      // If it was a trainer, remove & notify
       for (const [trainerId, sockId] of trainerSocketMap.entries()) {
         if (sockId === socket.id) {
           trainerSocketMap.delete(trainerId);
+          io.emit("user-status-change", { userId: trainerId, isOnline: false });
         }
       }
       // If it was an admin, remove

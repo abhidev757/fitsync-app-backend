@@ -6,6 +6,8 @@ export interface IMessage extends Document {
   receiverId: Types.ObjectId;
   text: string;
   imageUrl?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IMessageData {
