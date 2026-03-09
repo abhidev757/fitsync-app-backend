@@ -112,6 +112,9 @@ import { ReviewService } from "../services/user/ReviewService";
 // Config
 import { STRIPE_CONFIG } from "./stripe";
 
+// --- CronService ---
+import { CronService } from "../services/CronService";
+
 const container = new Container();
 
 // ---------------------------------------------------------
@@ -188,5 +191,8 @@ container.bind<ReviewController>(ReviewController).toSelf();
 // --- Config ---
 container.bind<string>("StripeSecretKey").toConstantValue(process.env.STRIPE_SECRET_KEY!);
 container.bind<typeof STRIPE_CONFIG>("StripeConfig").toConstantValue(STRIPE_CONFIG);
+
+// --- Background Jobs ---
+container.bind<CronService>(CronService).toSelf().inSingletonScope();
 
 export { container };

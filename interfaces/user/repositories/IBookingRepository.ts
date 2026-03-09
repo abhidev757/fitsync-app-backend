@@ -6,4 +6,5 @@ export interface IBookingRepository {
     findByUserId(userId: string): Promise<IBooking[]>;
     findByBookingId(bookingId: string): Promise<IBooking | null>;
     updateBookingStatus(bookingId: string, status: string): Promise<IBooking>;
+    findExpiredBookings(currentDate: Date): Promise<IBooking[]>;
 }

@@ -15,6 +15,7 @@ export interface ITrainer extends Document {
     profileImageUrl: string;
     specializations: string[];
     yearsOfExperience: number;
+    bio?: string;
     verificationStatus: boolean;
     role: 'trainer';
     resetPassword: {
@@ -29,6 +30,7 @@ export interface ITrainer extends Document {
     balance: number;
     isBlocked:boolean;
     otpExpiresAt: Date;
+    rating?: number;
     timeSlots?: ITimeSlots[];
 
     matchPassword: (enteredPassword: string) => Promise<boolean>;
@@ -39,6 +41,7 @@ export interface ITrainerProfile {
   email: string;
   phone?: string;
   sex?: string;
+  bio?: string;
   specializations: string[];
 }
 

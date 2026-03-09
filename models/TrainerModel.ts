@@ -40,6 +40,9 @@ const TrainerSchema = new mongoose.Schema<ITrainer>(
         type: String,
       },
     ],
+    bio: {
+      type: String,
+    },
     verificationStatus: {
       type: Boolean,
       default: false,

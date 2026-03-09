@@ -48,4 +48,12 @@ server.listen(PORT,()=>{
 
 
 
+import { container } from './config/container';
+import { CronService } from './services/CronService';
+
 connectDB()
+  .then(() => {
+    // Initialize Cron Jobs
+    const cronService = container.get<CronService>(CronService);
+    cronService.startCronJobs();
+  });

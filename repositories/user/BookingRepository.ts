@@ -30,4 +30,14 @@ export class BookingRepository extends BaseRepository<IBooking> implements IBook
         if (!updatedBooking) throw new Error("Booking not found");
         return updatedBooking;
     }
+
+    async findExpiredBookings(currentDate: Date): Promise<IBooking[]> {
+        const startOfDay = new Date(currentDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        return await this.BookingModel.find({
+            status: "confirmed",
+            startDate: { $lt: startOfDay }
+        }).exec();
+    }
 }
