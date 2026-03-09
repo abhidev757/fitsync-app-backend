@@ -61,13 +61,17 @@ export class FitnessRepository extends BaseRepository<IUserFitness> implements I
         // Month range (month is 0-indexed in JS Date)
         const start = new Date(year, month, 1);
         const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const queryStart = start < today ? today : start;
 
         const [user, fitness, bookings] = await Promise.all([
             this.UserModel.findById(userId).select("name profileImageUrl").lean(),
             this.UserFitnessModel.findOne({ userId }).lean(),
             this.BookingModel.find({
                 userId: new mongoose.Types.ObjectId(userId),
-                startDate: { $gte: start, $lte: end },
+                startDate: { $gte: queryStart, $lte: end },
                 status: { $nin: ["cancelled"] },
             }).select("startDate").lean(),
         ]);

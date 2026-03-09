@@ -5,6 +5,7 @@ import UserFitness from "../../models/UserInfo";
 import TrainerModel from "../../models/TrainerModel";
 import timeSlotsModel from "../../models/timeSlotsModel";
 import Specialization from "../../models/SpecializationModel";
+import { Review } from "../../models/ReviewModel";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { BaseRepository } from "../base/BaseRepository";
 import { IUserRepository } from "../../interfaces/user/repositories/IUserRepository";
@@ -28,6 +29,7 @@ export class UserRepository extends BaseRepository<IUser> implements IUserReposi
     private readonly TrainerModel = TrainerModel;
     private readonly TimeSlotsModel = timeSlotsModel;
     private readonly SpecializationModel = Specialization;
+    private readonly ReviewModel = Review;
 
     constructor() { super(User); }
 
@@ -62,7 +64,19 @@ export class UserRepository extends BaseRepository<IUser> implements IUserReposi
     }
 
     async findAllTrainers(): Promise<ITrainer[]> {
-        return await this.TrainerModel.find({ verificationStatus: true }).select("name status yearsOfExperience specializations createdAt profileImageUrl");
+        const trainers = await this.TrainerModel.find({ verificationStatus: true }).select("name status yearsOfExperience specializations createdAt profileImageUrl description").lean() as ITrainer[];
+        
+        for (const trainer of trainers) {
+            const reviews = await this.ReviewModel.find({ trainerId: trainer._id });
+            if (reviews.length > 0) {
+                const sum = reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0);
+                trainer.rating = Number((sum / reviews.length).toFixed(1));
+            } else {
+                trainer.rating = 0;
+            }
+        }
+        
+        return trainers;
     }
 
     async findTrainerById(userId: string): Promise<ITrainer | null> {
