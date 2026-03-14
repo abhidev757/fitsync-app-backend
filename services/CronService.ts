@@ -4,6 +4,7 @@ import { IBookingRepository } from "../interfaces/user/repositories/IBookingRepo
 import { IPaymentRepository } from "../interfaces/user/repositories/IPaymentRepository";
 import { INotificationService } from "../interfaces/notification/services/INotificationService";
 import mongoose from "mongoose";
+import TimeSlots from "../models/timeSlotsModel";
 
 @injectable()
 export class CronService {
@@ -16,25 +17,64 @@ export class CronService {
   public startCronJobs() {
     console.log("[CronService] Initializing scheduled tasks...");
     
-    // Run every day at midnight (00:00)
-    cron.schedule("0 0 * * *", async () => {
-      console.log("[CronService] Running daily auto-cancel job for expired bookings...");
+    // Run immediately on boot to catch up on any missed jobs
+    this.autoCancelExpiredBookings().catch(err => {
+      console.error("[CronService] Error during startup auto-cancel:", err);
+    });
+    this.autoDeleteExpiredSlots().catch(err => {
+      console.error("[CronService] Error during startup slot deletion:", err);
+    });
+    
+    // Run every hour at the top of the hour (e.g. 1:00, 2:00)
+    cron.schedule("0 * * * *", async () => {
+      console.log("[CronService] Running hourly jobs...");
       try {
         await this.autoCancelExpiredBookings();
       } catch (error) {
         console.error("[CronService] Error running auto-cancel job:", error);
       }
+      try {
+        await this.autoDeleteExpiredSlots();
+      } catch (error) {
+        console.error("[CronService] Error running auto-delete slots job:", error);
+      }
     });
+  }
 
-    // Optional: For testing purposes you can uncomment this to run it every minute
-    // cron.schedule("* * * * *", async () => {
-    //   console.log("[CronService - TEST] Running auto-cancel job every minute...");
-    //   try {
-    //     await this.autoCancelExpiredBookings();
-    //   } catch (error) {
-    //     console.error("[CronService - TEST] Error:", error);
-    //   }
-    // });
+  private async autoDeleteExpiredSlots() {
+    const allSlots = await TimeSlots.find({ isBooked: false });
+    if (!allSlots || allSlots.length === 0) return;
+
+    const now = new Date();
+    const boundary = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+    const expiredSlotIds: mongoose.Types.ObjectId[] = [];
+
+    for (const slot of allSlots) {
+      const slotDate = new Date(slot.startDate);
+      const timeParts = slot.time.split('-').map(p => p.trim());
+      const endTimeStr = timeParts.length > 1 ? timeParts[1] : timeParts[0];
+
+      const match = endTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3].toUpperCase();
+        if (period === 'PM' && hours < 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        slotDate.setHours(hours, minutes, 0, 0);
+      }
+
+      // If the slot ended more than 24 hours ago
+      if (slotDate < boundary) {
+        expiredSlotIds.push(slot._id as mongoose.Types.ObjectId);
+      }
+    }
+
+    if (expiredSlotIds.length > 0) {
+      console.log(`[CronService] Found ${expiredSlotIds.length} expired time slots (>24h). Deleting...`);
+      await TimeSlots.deleteMany({ _id: { $in: expiredSlotIds } });
+      console.log(`[CronService] Successfully deleted expired time slots.`);
+    }
   }
 
   private async autoCancelExpiredBookings() {

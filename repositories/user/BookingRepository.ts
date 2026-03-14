@@ -31,13 +31,55 @@ export class BookingRepository extends BaseRepository<IBooking> implements IBook
         return updatedBooking;
     }
 
-    async findExpiredBookings(currentDate: Date): Promise<IBooking[]> {
-        const startOfDay = new Date(currentDate);
-        startOfDay.setHours(0, 0, 0, 0);
+    private parse12HourTime(timeStr: string): { hours: number, minutes: number } {
+        const [time, modifier] = timeStr.trim().split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (hours === 12) {
+            hours = 0;
+        }
+        if (modifier && modifier.toUpperCase() === 'PM') {
+            hours += 12;
+        }
+        return { hours, minutes };
+    }
 
-        return await this.BookingModel.find({
+    async findExpiredBookings(currentDate: Date): Promise<IBooking[]> {
+        const startOfTomorrow = new Date(currentDate);
+        startOfTomorrow.setHours(24, 0, 0, 0);
+
+        const possibleExpired = await this.BookingModel.find({
             status: "confirmed",
-            startDate: { $lt: startOfDay }
+            startDate: { $lt: startOfTomorrow }
         }).exec();
+
+        const expiredBookings: IBooking[] = [];
+
+        for (const booking of possibleExpired) {
+            try {
+                const parts = booking.sessionTime.split("-");
+                if (parts.length < 2) {
+                    const startOfDay = new Date(currentDate);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    if (new Date(booking.startDate) < startOfDay) {
+                        expiredBookings.push(booking);
+                    }
+                    continue;
+                }
+
+                const endTimeStr = parts[1].trim();
+                const { hours, minutes } = this.parse12HourTime(endTimeStr);
+                
+                const expirationDate = new Date(booking.startDate);
+                expirationDate.setHours(hours, minutes, 0, 0);
+
+                if (expirationDate < currentDate) {
+                    expiredBookings.push(booking);
+                }
+            } catch (err) {
+                console.error(`Error parsing session time for booking ${booking._id}:`, err);
+            }
+        }
+
+        return expiredBookings;
     }
 }
