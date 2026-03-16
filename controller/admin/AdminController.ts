@@ -32,7 +32,12 @@ export class AdminController {
     })
     register = asyncHandler(async (req: Request, res: Response)=>{
         const {email, password} = req.body;
-        await this.adminService.registerAdmin(email,password);
+        if (!email || !password) {
+            res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Email and password are required' });
+            return;
+        }
+        await this.adminService.registerAdmin(email, password);
+        res.status(HttpStatusCode.CREATED).json({ message: 'Admin registered successfully' });
     })
 
     logout = asyncHandler(async (req: Request, res: Response)=>{

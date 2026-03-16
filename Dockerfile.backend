@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+# Install build dependencies (optional but recommended for bcrypt/native modules)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+RUN npm install -g nodemon ts-node typescript
+
+# Copy package files first for better layer caching
+COPY package*.json ./
+
+# Install ALL dependencies (including devDeps like typescript and nodemon)
+RUN npm install
+
+# Copy the rest of your source code
+COPY . .
+
+# Expose your Express/Socket.io port
+EXPOSE 4000
+
+# Start using your nodemon script
+CMD ["npm", "run", "dev"]
