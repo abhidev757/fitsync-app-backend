@@ -72,7 +72,7 @@ export class FitnessRepository extends BaseRepository<IUserFitness> implements I
             this.BookingModel.find({
                 userId: new mongoose.Types.ObjectId(userId),
                 startDate: { $gte: queryStart, $lte: end },
-                status: { $nin: ["cancelled"] },
+                status: "scheduled",
             }).select("startDate").lean(),
         ]);
 

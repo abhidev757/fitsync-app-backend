@@ -24,17 +24,18 @@ class AdminTokenService {
         )
     }
     static setAdminTokenCookies(res: Response, adminAccessToken: string, adminRefreshToken: string): void {
+        const isProduction = process.env.NODE_ENV !== 'development';
         res.cookie('adminAccessToken', adminAccessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'development',
-            sameSite: 'strict',
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'strict',
             maxAge: 15 * 60 * 1000 //15 mins
         })
 
         res.cookie('adminRefreshToken', adminRefreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'development',
-            sameSite: 'strict',
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000 //7 days
         })
     }

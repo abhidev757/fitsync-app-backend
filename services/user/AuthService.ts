@@ -28,7 +28,7 @@ export class AuthService {
   async registerUser(userData: IUser): Promise<IUser | null> {
     try {
       const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
       const user = await this.authRepository.createNewData({
         ...userData,
         otp,
@@ -37,7 +37,9 @@ export class AuthService {
       if (!user) {
         throw new Error("User registration failed");
       }
-      await sendOTP(userData.email, otp);
+      sendOTP(userData.email, otp).catch(err => {
+          console.error("Background Email Error:", err);
+      });      
       return user;
     } catch (err) {
       console.log(err);
@@ -51,10 +53,12 @@ export class AuthService {
       if (!user) return { success: false, message: "User not found" };
 
       const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
+      const otpExpiresAt = new Date(Date.now() + 10  * 60 * 1000);
 
       await this.authRepository.update(user._id.toString(), { otp, otpExpiresAt });
-      await sendOTP(email, otp);
+      sendOTP(email, otp).catch(err => {
+          console.error("Background Email Error:", err);
+      });
 
       return { success: true, message: "OTP sent successfully" };
     } catch (error) {

@@ -42,7 +42,7 @@ export class TrainerAuthService {
     let dataToUpdate: Partial<ITrainer> | null = null;
     try {
       const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
       const trainer = await this.trainerAuthRepository.createNewData({
         ...trainerData,
         otp,
@@ -73,7 +73,7 @@ export class TrainerAuthService {
       }
 
       const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000);
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await this.trainerAuthRepository.update(user._id.toString(), {
         otp,
