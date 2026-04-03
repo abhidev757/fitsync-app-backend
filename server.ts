@@ -15,15 +15,15 @@ import {app,server} from './config/socket'
 
 
 const corsOptions = {
-    origin: ["http://localhost:3001", "https://accounts.google.com"], 
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: ["http://localhost:3001", "https://accounts.google.com","https://fitsync-app-rho.vercel.app"], 
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"], 
     credentials: true,
   };
   
   app.use(cors(corsOptions));
   
-const PORT = process.env.PORT || 4000
+const PORT = Number(process.env.PORT) || 4000;
 import connectDB from './config/db'
 
 app.use(express.json())
@@ -41,7 +41,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/video", videoRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-server.listen(PORT,()=>{
+server.listen(PORT,'0.0.0.0',()=>{
     console.log(`Server is listening to port: ${PORT}`);
 })
 
